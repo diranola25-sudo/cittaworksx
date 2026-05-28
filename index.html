@@ -8,514 +8,301 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="CittaWorksX"/>
-<meta name="description" content="Staff Time Management & Productivity Tracker"/>
 <title>CittaWorksX</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --bg:#0a0f1e;--bg2:#111827;--bg3:#1a2235;--bg4:#243049;
-  --accent:#00d4aa;--accent2:#0099ff;--accent3:#f59e0b;
-  --text:#e8edf5;--text2:#94a3b8;--text3:#64748b;
-  --border:#1e2d4a;--border2:#2a3d5c;
-  --danger:#ef4444;--success:#22c55e;--warn:#f59e0b;
-  --card-radius:14px;--btn-radius:8px;
-  --font-mono:'Space Mono',monospace;--font-sans:'DM Sans',sans-serif;
-  --shadow:0 4px 24px rgba(0,0,0,.4);
-}
-[data-theme="light"]{
-  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8eef5;--bg4:#dde6f0;
-  --text:#0f172a;--text2:#334155;--text3:#64748b;
-  --border:#cbd5e1;--border2:#94a3b8;
-  --shadow:0 4px 24px rgba(0,0,0,.1);
-}
+:root{--bg:#0a0f1e;--bg2:#111827;--bg3:#1a2235;--bg4:#243049;--accent:#00d4aa;--accent2:#0099ff;--text:#e8edf5;--text2:#94a3b8;--text3:#64748b;--border:#1e2d4a;--border2:#2a3d5c;--danger:#ef4444;--success:#22c55e;--warn:#f59e0b;--cr:14px;--br:8px;--font-mono:'Space Mono',monospace;--font-sans:'DM Sans',sans-serif;}
+[data-theme="light"]{--bg:#f0f4f8;--bg2:#fff;--bg3:#e8eef5;--bg4:#dde6f0;--text:#0f172a;--text2:#334155;--text3:#64748b;--border:#cbd5e1;--border2:#94a3b8;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;font-family:var(--font-sans);background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;}
 input,select,textarea,button{font-family:inherit;}
 a{color:var(--accent);text-decoration:none;}
-
-/* ========== LAYOUT ========== */
-#app{min-height:100vh;display:flex;flex-direction:column;}
+#app{min-height:100vh;}
 .screen{display:none;flex-direction:column;min-height:100vh;}
 .screen.active{display:flex;}
-
-/* ========== TOPBAR ========== */
-.topbar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:0 1.25rem;height:60px;display:flex;align-items:center;
-  justify-content:space-between;position:sticky;top:0;z-index:100;
-  flex-shrink:0;
-}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.25rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0;}
 .topbar-logo{display:flex;align-items:center;gap:10px;}
-.logo-mark{
-  width:36px;height:36px;background:var(--accent);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-weight:700;font-size:16px;color:#0a0f1e;
-}
+.logo-mark{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:#0a0f1e;}
 .logo-text{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:-.5px;}
 .logo-text span{color:var(--accent);}
-.topbar-right{display:flex;align-items:center;gap:8px;}
-
-/* ========== BUTTONS ========== */
-.btn{
-  border:1.5px solid var(--border2);background:transparent;color:var(--text);
-  padding:.55rem 1.1rem;border-radius:var(--btn-radius);cursor:pointer;
-  font-size:14px;font-weight:500;transition:all .18s;display:inline-flex;
-  align-items:center;gap:6px;white-space:nowrap;
-}
+.btn{border:1.5px solid var(--border2);background:transparent;color:var(--text);padding:.55rem 1.1rem;border-radius:var(--br);cursor:pointer;font-size:14px;font-weight:500;transition:all .18s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
 .btn:hover{background:var(--bg3);border-color:var(--accent);}
 .btn:active{transform:scale(.97);}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#0a0f1e;font-weight:600;}
 .btn-primary:hover{background:#00b894;border-color:#00b894;color:#0a0f1e;}
 .btn-danger{background:var(--danger);border-color:var(--danger);color:#fff;}
 .btn-danger:hover{background:#dc2626;border-color:#dc2626;}
+.btn-success{background:var(--success);border-color:var(--success);color:#fff;}
 .btn-sm{padding:.35rem .75rem;font-size:13px;}
 .btn-icon{width:36px;height:36px;padding:0;justify-content:center;}
-
-/* ========== CARDS ========== */
-.card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--card-radius);padding:1.25rem;
-}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-.card-title{font-family:var(--font-mono);font-size:13px;font-weight:700;
-  text-transform:uppercase;letter-spacing:1px;color:var(--text2);}
-
-/* ========== FORMS ========== */
-.form-group{margin-bottom:1rem;}
-.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:.4rem;}
-.form-group input,.form-group select,.form-group textarea{
-  width:100%;background:var(--bg3);border:1.5px solid var(--border);
-  color:var(--text);padding:.65rem .9rem;border-radius:var(--btn-radius);
-  font-size:14px;transition:border .18s;outline:none;
-}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
-  border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,170,.12);
-}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--cr);padding:1.25rem;}
+.card-title{font-family:var(--font-mono);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:.9rem;}
+.form-group{margin-bottom:.9rem;}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:.35rem;}
+.form-group label .req{color:var(--danger);}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.62rem .9rem;border-radius:var(--br);font-size:14px;transition:border .15s;outline:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,170,.12);}
+.form-group input.error,.form-group select.error,.form-group textarea.error{border-color:var(--danger);}
+.form-group .field-error{font-size:12px;color:var(--danger);margin-top:.25rem;}
 .form-group select option{background:var(--bg2);}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.form-error{font-size:12px;color:var(--danger);margin-top:.3rem;}
-
-/* ========== BADGES ========== */
-.badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:.2rem .6rem;border-radius:20px;font-size:12px;font-weight:600;
-}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:.2rem .6rem;border-radius:20px;font-size:12px;font-weight:600;}
 .badge-success{background:rgba(34,197,94,.15);color:#22c55e;}
 .badge-danger{background:rgba(239,68,68,.15);color:#ef4444;}
 .badge-warn{background:rgba(245,158,11,.15);color:#f59e0b;}
 .badge-info{background:rgba(0,153,255,.15);color:#0099ff;}
 .badge-accent{background:rgba(0,212,170,.15);color:#00d4aa;}
-
-/* ========== CONTAINERS ========== */
 .container{max-width:900px;margin:0 auto;padding:1.5rem 1.25rem;width:100%;}
-.page-title{font-family:var(--font-mono);font-size:22px;font-weight:700;margin-bottom:1.5rem;}
+.page-title{font-family:var(--font-mono);font-size:20px;font-weight:700;margin-bottom:1.25rem;}
 .page-title span{color:var(--accent);}
-
-/* ========== THEME TOGGLE ========== */
-.theme-toggle{
-  width:52px;height:28px;background:var(--bg3);border:1.5px solid var(--border2);
-  border-radius:14px;position:relative;cursor:pointer;transition:all .2s;
-}
-.theme-toggle::after{
-  content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;
-  background:var(--accent);border-radius:50%;transition:all .25s;
-}
+.theme-toggle{width:52px;height:28px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0;}
+.theme-toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:var(--accent);border-radius:50%;transition:left .25s;}
 [data-theme="light"] .theme-toggle::after{left:27px;}
-.theme-label{font-size:12px;color:var(--text3);}
-
-/* ========== NAV ========== */
-.bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
-  border-top:1px solid var(--border);display:flex;z-index:100;
-}
-.nav-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:.6rem .4rem;cursor:pointer;color:var(--text3);transition:color .18s;
-  font-size:11px;gap:3px;
-}
-.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.55rem .4rem;cursor:pointer;color:var(--text3);transition:color .18s;font-size:10px;gap:3px;}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;}
 .nav-item.active{color:var(--accent);}
-
-/* ========== LOGIN ========== */
-#login-screen{
-  background:var(--bg);align-items:center;justify-content:center;
-  min-height:100vh;padding:1.5rem;
-}
-.login-card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:20px;
-  padding:2.5rem;width:100%;max-width:420px;
-}
-.login-logo{text-align:center;margin-bottom:2rem;}
-.login-logo .mark{
-  width:64px;height:64px;background:var(--accent);border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-weight:700;font-size:28px;color:#0a0f1e;
-  margin:0 auto 12px;
-}
-.login-logo h1{font-family:var(--font-mono);font-size:24px;font-weight:700;}
-.login-logo h1 span{color:var(--accent);}
-.login-logo p{color:var(--text3);font-size:13px;margin-top:4px;}
-.company-select-box{
-  background:var(--bg3);border:1.5px solid var(--accent);border-radius:12px;
-  padding:.9rem 1rem;margin-bottom:1.5rem;cursor:pointer;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.company-select-box .co-name{font-weight:600;font-size:14px;}
-.company-select-box .co-label{font-size:12px;color:var(--text3);}
-
-/* ========== SIGNIN SCREEN ========== */
-.signin-hero{
-  background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);
-  border:1px solid var(--border);border-radius:var(--card-radius);
-  padding:1.5rem;margin-bottom:1.5rem;
-}
-.time-display{
-  font-family:var(--font-mono);font-size:42px;font-weight:700;
-  color:var(--accent);letter-spacing:-2px;margin-bottom:.25rem;
-}
-.date-display{font-size:14px;color:var(--text2);}
-.location-indicator{
-  display:flex;align-items:center;gap:8px;margin-top:1rem;
-  padding:.65rem .9rem;background:var(--bg);border-radius:8px;
-  border:1px solid var(--border);
-}
-.loc-dot{
-  width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;
-}
+.nav-item.hidden{display:none;}
+.pb-nav{padding-bottom:calc(5.5rem + env(safe-area-inset-bottom));}
+.offline-banner{background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);padding:.5rem 1.25rem;font-size:12px;color:var(--warn);display:flex;align-items:center;gap:.5rem;}
+.offline-banner.hidden{display:none;}
+.signin-hero{background:var(--bg2);border:1px solid var(--border);border-radius:var(--cr);padding:1.35rem;margin-bottom:1.25rem;}
+.time-display{font-family:var(--font-mono);font-size:38px;font-weight:700;color:var(--accent);letter-spacing:-2px;margin-bottom:.2rem;}
+.date-display{font-size:13px;color:var(--text2);}
+.loc-box{display:flex;align-items:center;gap:8px;margin-top:.9rem;padding:.6rem .85rem;background:var(--bg);border-radius:8px;border:1px solid var(--border);}
+.loc-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;}
 .loc-dot.locating{background:var(--warn);animation:pulse 1s infinite;}
 .loc-dot.located{background:var(--success);}
 .loc-dot.failed{background:var(--danger);}
-.loc-text{font-size:12px;color:var(--text2);word-break:break-word;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-
-/* ========== CHECKLIST ========== */
-.task-item{
-  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
-  padding:1rem;margin-bottom:.75rem;position:relative;
-}
-.task-item .task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;}
-.task-num{
-  font-family:var(--font-mono);font-size:11px;color:var(--accent);
-  background:rgba(0,212,170,.1);padding:.15rem .5rem;border-radius:4px;font-weight:700;
-}
-.value-field{
-  display:flex;align-items:center;gap:6px;margin-top:.5rem;
-}
-.value-field .prefix{
-  font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent);flex-shrink:0;
-}
-.value-field input{flex:1;}
-.add-task-btn{
-  border:2px dashed var(--border2);background:transparent;color:var(--text3);
-  width:100%;padding:.9rem;border-radius:10px;cursor:pointer;font-size:14px;
-  transition:all .18s;margin-top:.25rem;
-}
-.add-task-btn:hover{border-color:var(--accent);color:var(--accent);}
-
-/* ========== STATUS CARDS ========== */
-.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem;}
-.stat-card{
-  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
-  padding:.9rem;
-}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.15rem;}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.9rem;}
 .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.3rem;}
-.stat-val{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text);}
+.stat-val{font-family:var(--font-mono);font-size:17px;font-weight:700;}
 .stat-val.accent{color:var(--accent);}
-
-/* ========== TABLE ========== */
-.table-wrap{overflow-x:auto;margin-top:.5rem;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-th{
-  text-align:left;padding:.6rem .8rem;font-size:11px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.8px;color:var(--text3);
-  border-bottom:1px solid var(--border);background:var(--bg3);
-}
-td{padding:.65rem .8rem;border-bottom:1px solid var(--border);color:var(--text);}
-tr:hover td{background:var(--bg3);}
-tr:last-child td{border-bottom:none;}
-
-/* ========== MODAL ========== */
-.modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
-  display:flex;align-items:flex-end;justify-content:center;
-  backdrop-filter:blur(4px);
-}
+.task-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem;}
+.task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;}
+.task-num{font-family:var(--font-mono);font-size:11px;color:var(--accent);background:rgba(0,212,170,.1);padding:.15rem .5rem;border-radius:4px;font-weight:700;}
+.add-task-btn{border:2px dashed var(--border2);background:transparent;color:var(--text3);width:100%;padding:.85rem;border-radius:10px;cursor:pointer;font-size:14px;transition:all .18s;margin-top:.25rem;}
+.add-task-btn:hover{border-color:var(--accent);color:var(--accent);}
+.value-prefix{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
 .modal-overlay.hidden{display:none;}
-.modal{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:20px 20px 0 0;width:100%;max-width:600px;
-  max-height:90vh;overflow-y:auto;padding:1.5rem 1.25rem;
-  padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));
-  animation:slideUp .25s ease;
-}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;padding:1.5rem 1.25rem;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));animation:slideUp .22s ease;}
 @keyframes slideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-.modal-title{font-family:var(--font-mono);font-size:16px;font-weight:700;margin-bottom:1.25rem;}
-.modal-handle{
-  width:40px;height:4px;background:var(--border2);border-radius:2px;
-  margin:0 auto .9rem;
-}
-
-/* ========== SCROLLBARS ========== */
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-
-/* ========== ALERTS ========== */
-.alert{
-  padding:.75rem 1rem;border-radius:8px;font-size:13px;
-  display:flex;align-items:flex-start;gap:.6rem;margin-bottom:1rem;
-}
+.modal-handle{width:38px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto .85rem;}
+.modal-title{font-family:var(--font-mono);font-size:15px;font-weight:700;margin-bottom:1.1rem;}
+.alert{padding:.7rem .95rem;border-radius:8px;font-size:13px;display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.85rem;}
+.alert.hidden{display:none;}
 .alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;}
 .alert-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
 .alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#f59e0b;}
 .alert-info{background:rgba(0,153,255,.1);border:1px solid rgba(0,153,255,.3);color:#0099ff;}
-.alert.hidden{display:none;}
-
-/* ========== TABS ========== */
-.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:1.25rem;}
-.tab{
-  flex:1;padding:.5rem .75rem;border-radius:8px;border:none;
-  background:transparent;color:var(--text3);cursor:pointer;
-  font-size:13px;font-weight:500;transition:all .18s;
-}
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:1.1rem;}
+.tab{flex:1;padding:.45rem .75rem;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;}
 .tab.active{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
-
-/* ========== REPORTS ========== */
-.report-row{
-  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
-  padding:.9rem 1rem;margin-bottom:.6rem;
-  display:flex;align-items:center;gap:10px;cursor:pointer;
-  transition:border-color .18s;
-}
+.report-row{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:.55rem;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:10px;}
 .report-row:hover{border-color:var(--accent);}
-.report-avatar{
-  width:40px;height:40px;border-radius:10px;background:var(--bg4);
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--accent);
-  flex-shrink:0;
+.report-avatar{width:38px;height:38px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent);flex-shrink:0;}
+.user-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:13px;background:var(--bg4);color:var(--accent);cursor:pointer;}
+.section-divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:.55rem .75rem;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg3);}
+td{padding:.6rem .75rem;border-bottom:1px solid var(--border);}
+tr:hover td{background:var(--bg3);}
+tr:last-child td{border-bottom:none;}
+.review-task-row{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.85rem;margin-bottom:.6rem;}
+.review-grid{display:grid;grid-template-columns:1fr auto auto;gap:.75rem;align-items:center;}
+.total-row{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:.85rem 1rem;margin-top:.5rem;display:flex;justify-content:space-between;align-items:center;}
+/* Guide styles */
+.guide-section{margin-bottom:2rem;}
+.guide-section h3{font-family:var(--font-mono);font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem;display:flex;align-items:center;gap:8px;}
+.guide-step{display:flex;gap:12px;margin-bottom:.75rem;}
+.guide-step .step-num{width:24px;height:24px;border-radius:50%;background:rgba(0,212,170,.15);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono);}
+.guide-step .step-body{flex:1;font-size:13px;color:var(--text2);line-height:1.65;}
+.guide-step .step-body strong{color:var(--text);font-weight:600;}
+/* Print styles */
+@media print{
+  .topbar,.bottom-nav,.btn,.no-print{display:none!important;}
+  body{background:#fff!important;color:#000!important;}
+  .print-area{display:block!important;}
+  table{font-size:11px;}
+  th,td{border:1px solid #ccc;padding:4px 8px;}
 }
-.report-info{flex:1;min-width:0;}
-.report-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.report-meta{font-size:12px;color:var(--text3);}
-.report-value{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--success);flex-shrink:0;}
-
-/* ========== RESPONSIVE ========== */
-@media(max-width:480px){
-  .form-row{grid-template-columns:1fr;}
-  .time-display{font-size:34px;}
-}
-.pb-nav{padding-bottom:calc(5rem + env(safe-area-inset-bottom));}
-
-/* ========== SECTION DIVIDER ========== */
-.section-divider{
-  display:flex;align-items:center;gap:.75rem;margin:1.5rem 0;
-  font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);
-}
-.section-divider::before,.section-divider::after{
-  content:'';flex:1;height:1px;background:var(--border);
-}
-
-/* ========== COMPANY CARDS ========== */
-.company-list{display:flex;flex-direction:column;gap:.6rem;}
-.company-card{
-  background:var(--bg3);border:1.5px solid var(--border);
-  border-radius:12px;padding:1rem;cursor:pointer;transition:all .18s;
-  display:flex;align-items:center;gap:12px;
-}
-.company-card:hover{border-color:var(--accent);}
-.company-card.selected{border-color:var(--accent);background:rgba(0,212,170,.06);}
-.co-icon{
-  width:46px;height:46px;border-radius:12px;display:flex;
-  align-items:center;justify-content:center;font-weight:700;
-  font-size:18px;font-family:var(--font-mono);flex-shrink:0;
-}
-.offline-banner{
-  background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
-  padding:.5rem 1.25rem;font-size:12px;color:var(--warn);
-  display:flex;align-items:center;gap:.5rem;
-}
-.offline-banner.hidden{display:none;}
-
-/* ========== PROFILE AVATAR ========== */
-.user-avatar{
-  width:32px;height:32px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-weight:700;font-size:13px;
-  background:var(--bg4);color:var(--accent);cursor:pointer;
-}
+@media(max-width:480px){.form-row{grid-template-columns:1fr;}.time-display{font-size:30px;}}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ========== OFFLINE BANNER ========== -->
 <div class="offline-banner hidden" id="offline-banner">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6s4-4 11-4 11 4 11 4"/><path d="M1 12s4-4 11-4 11 4 11 4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-  You're offline — data saved locally
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6s4-4 11-4 11 4 11 4"/><path d="M1 12s4-4 11-4 11 4 11 4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  Offline — data saved locally and will sync when reconnected
 </div>
 
-<!-- ========== COMPANY SELECT SCREEN ========== -->
-<div class="screen active" id="company-screen" style="align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--bg);">
+<!-- ========== COMPANY SELECT ========== -->
+<div class="screen active" id="company-screen" style="align-items:center;justify-content:center;padding:1.5rem;background:var(--bg);">
   <div style="width:100%;max-width:440px;">
     <div style="text-align:center;margin-bottom:2rem;">
-      <div style="width:72px;height:72px;background:var(--accent);border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:32px;color:#0a0f1e;margin:0 auto 14px;">C</div>
-      <h1 style="font-family:var(--font-mono);font-size:26px;font-weight:700;">Citta<span style="color:var(--accent);">Works</span>X</h1>
-      <p style="color:var(--text3);font-size:13px;margin-top:6px;">Select your company to continue</p>
+      <div style="width:68px;height:68px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:30px;color:#0a0f1e;margin:0 auto 12px;">C</div>
+      <h1 style="font-family:var(--font-mono);font-size:24px;font-weight:700;">Citta<span style="color:var(--accent);">Works</span>X</h1>
+      <p style="color:var(--text3);font-size:13px;margin-top:5px;">Select your company workspace</p>
     </div>
-    <div class="company-list" id="company-list"></div>
-    <div class="section-divider">or</div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="showAddCompany()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-      Register New Company
-    </button>
-    <div style="text-align:center;margin-top:1.25rem;">
-      <span class="theme-label">Theme</span>
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="display:inline-block;vertical-align:middle;margin-left:8px;"></button>
+    <div id="company-list" style="margin-bottom:1rem;"></div>
+    <div style="text-align:center;margin-top:1.25rem;font-size:12px;color:var(--text3);">
+      Need to add a company? <a href="admin.html">Admin Portal →</a>
+    </div>
+    <div style="text-align:center;margin-top:1rem;">
+      <button class="theme-toggle" onclick="toggleTheme()"></button>
     </div>
   </div>
 </div>
 
-<!-- ========== LOGIN SCREEN ========== -->
+<!-- ========== LOGIN ========== -->
 <div class="screen" id="login-screen">
-  <div style="align-items:center;justify-content:center;min-height:100vh;display:flex;padding:1.5rem;background:var(--bg);">
-    <div class="login-card">
-      <div class="login-logo">
-        <div class="mark" id="login-co-initial">C</div>
-        <h1 id="login-co-name">CittaWorks<span>X</span></h1>
-        <p id="login-co-sub">Staff Portal</p>
+  <div style="align-items:center;justify-content:center;display:flex;min-height:100vh;padding:1.5rem;background:var(--bg);">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:2.25rem;width:100%;max-width:400px;">
+      <div style="text-align:center;margin-bottom:1.75rem;">
+        <div id="login-co-mark" style="width:58px;height:58px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:24px;color:#0a0f1e;margin:0 auto 10px;">C</div>
+        <h2 id="login-co-name" style="font-family:var(--font-mono);font-size:18px;font-weight:700;">CittaWorksX</h2>
+        <p style="font-size:12px;color:var(--text3);margin-top:3px;">Staff Portal</p>
       </div>
       <div id="login-alert" class="alert hidden"></div>
-      <div class="form-group">
-        <label>Staff ID</label>
-        <input type="text" id="login-id" placeholder="Enter your Staff ID" autocomplete="username"/>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
-      </div>
+      <div class="form-group"><label>Staff ID</label><input type="text" id="login-id" placeholder="Enter Staff ID" autocomplete="username"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="doLogin()">Sign In</button>
-      <div style="text-align:center;margin-top:1.25rem;">
-        <button class="btn btn-sm" onclick="goBack('login-screen','company-screen')">← Back to Companies</button>
-      </div>
-      <div style="text-align:center;margin-top:.75rem;">
-        <span class="theme-label">Theme</span>
-        <button class="theme-toggle" onclick="toggleTheme()" style="display:inline-block;vertical-align:middle;margin-left:8px;"></button>
+      <div style="text-align:center;margin-top:1rem;">
+        <button class="btn btn-sm" onclick="showScreen('company-screen');renderCompanyScreen()">← Back</button>
+        <button class="theme-toggle" onclick="toggleTheme()" style="margin-left:10px;vertical-align:middle;"></button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ========== MAIN APP SCREEN ========== -->
+<!-- ========== MAIN APP ========== -->
 <div class="screen" id="main-screen">
   <div class="topbar">
     <div class="topbar-logo">
       <div class="logo-mark">C</div>
       <span class="logo-text">Citta<span>Works</span>X</span>
     </div>
-    <div class="topbar-right">
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"></button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" onclick="toggleTheme()"></button>
       <div class="user-avatar" id="user-avatar-btn" onclick="showUserMenu()">??</div>
     </div>
   </div>
 
-  <!-- Content area with bottom padding for nav -->
   <div style="flex:1;overflow-y:auto;" class="pb-nav">
 
-    <!-- DASHBOARD TAB -->
-    <div id="tab-dashboard" class="tab-content container">
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="container">
       <div id="main-alert" class="alert hidden"></div>
       <div class="signin-hero">
         <div class="time-display" id="live-clock">--:--:--</div>
         <div class="date-display" id="live-date">Loading…</div>
-        <div class="location-indicator" id="loc-indicator">
+        <div class="loc-box">
           <div class="loc-dot locating" id="loc-dot"></div>
-          <span class="loc-text" id="loc-text">Acquiring location…</span>
+          <span style="font-size:12px;color:var(--text2);word-break:break-word;" id="loc-text">Acquiring location…</span>
         </div>
       </div>
-
-      <!-- Status cards -->
-      <div class="status-grid">
-        <div class="stat-card">
-          <div class="stat-label">Status</div>
-          <div class="stat-val accent" id="stat-status">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Sign In</div>
-          <div class="stat-val" id="stat-signin">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Tasks Today</div>
-          <div class="stat-val" id="stat-tasks">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Value Added</div>
-          <div class="stat-val" id="stat-value">₦0</div>
-        </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Status</div><div class="stat-val accent" id="stat-status">—</div></div>
+        <div class="stat-card"><div class="stat-label">Sign In</div><div class="stat-val" id="stat-signin">—</div></div>
+        <div class="stat-card"><div class="stat-label">Tasks Today</div><div class="stat-val" id="stat-tasks">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val" id="stat-hours">0h 0m</div></div>
       </div>
-
-      <!-- Sign In / Sign Out button -->
       <div id="signin-btn-area"></div>
     </div>
 
-    <!-- TASKS TAB -->
-    <div id="tab-tasks" class="tab-content container" style="display:none;">
-      <div class="page-title">Daily <span>Tasks</span></div>
-      <div id="tasks-locked-msg" class="alert alert-warn hidden">
-        Sign in first to add tasks for today.
+    <!-- TASKS -->
+    <div id="tab-tasks" class="container" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <div class="page-title" style="margin:0;">My <span>Tasks</span></div>
+        <span id="tasks-save-indicator" style="font-size:12px;color:var(--success);opacity:0;transition:opacity .3s;">Saved ✓</span>
       </div>
+      <div id="tasks-locked-msg" class="alert alert-warn hidden">Please sign in first to add tasks.</div>
+      <div id="tasks-sigout-msg" class="alert alert-info hidden">Tasks locked after sign-out. Read only.</div>
       <div id="tasks-container"></div>
-      <button class="add-task-btn" id="add-task-btn" onclick="addTask()" style="display:none;">
-        + Add Task
-      </button>
-      <div id="tasks-footer" style="display:none;margin-top:1rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--bg3);border-radius:10px;border:1px solid var(--border);">
+      <button class="add-task-btn" id="add-task-btn" onclick="addTask()" style="display:none;">+ Add Task</button>
+      <div id="tasks-footer" style="display:none;margin-top:.9rem;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
           <span style="font-size:13px;color:var(--text2);">Total Value Added</span>
-          <span style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--success);" id="total-value-display">₦0</span>
+          <span style="font-family:var(--font-mono);font-size:17px;font-weight:700;color:var(--success);" id="total-value-display">₦0</span>
         </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <span style="font-size:13px;color:var(--text2);">Total Task Hours</span>
+          <span style="font-family:var(--font-mono);font-size:17px;font-weight:700;color:var(--accent);" id="total-hours-display">0h 0m</span>
+        </div>
+        <button class="btn btn-success" style="width:100%;justify-content:center;padding:.8rem;" id="review-submit-btn" onclick="showReview()">
+          Review & Submit Tasks →
+        </button>
       </div>
     </div>
 
-    <!-- REPORTS TAB (managers only) -->
-    <div id="tab-reports" class="tab-content container" style="display:none;">
-      <div class="page-title">Manager <span>Reports</span></div>
+    <!-- REPORTS (managers) -->
+    <div id="tab-reports" class="container" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <div class="page-title" style="margin:0;">Manager <span>Reports</span></div>
+        <button class="btn btn-sm btn-primary" onclick="printReport()" id="print-btn" style="display:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print PDF
+        </button>
+      </div>
+      <!-- Date filters -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="form-row" style="align-items:flex-end;gap:.75rem;">
+          <div class="form-group" style="margin:0;"><label>From Date</label><input type="date" id="rpt-from" onchange="renderReportContent()"/></div>
+          <div class="form-group" style="margin:0;"><label>To Date</label><input type="date" id="rpt-to" onchange="renderReportContent()"/></div>
+          <div class="form-group" style="margin:0;"><label>Department</label>
+            <select id="rpt-dept" onchange="renderReportContent()"><option value="">All Departments</option></select>
+          </div>
+        </div>
+      </div>
       <div class="tabs">
         <button class="tab active" onclick="switchReportTab('daily')">Daily Logs</button>
         <button class="tab" onclick="switchReportTab('staff')">By Staff</button>
         <button class="tab" onclick="switchReportTab('summary')">Summary</button>
+        <button class="tab" onclick="switchReportTab('detailed')">Detailed</button>
       </div>
-      <div id="report-daily"></div>
-      <div id="report-staff" style="display:none;"></div>
-      <div id="report-summary" style="display:none;"></div>
+      <div id="report-content"></div>
     </div>
 
-    <!-- STAFF TAB (managers only) -->
-    <div id="tab-staff" class="tab-content container" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+    <!-- STAFF (managers) -->
+    <div id="tab-staff" class="container" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
         <div class="page-title" style="margin:0;">Staff <span>Management</span></div>
-        <button class="btn btn-primary btn-sm" onclick="showRegisterStaff()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Register
-        </button>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-sm" onclick="showDeptJobModal()">Dept/Roles</button>
+          <button class="btn btn-sm btn-primary" onclick="showRegisterStaff()">+ Register</button>
+        </div>
       </div>
       <div id="staff-list-container"></div>
     </div>
 
-    <!-- PROFILE TAB -->
-    <div id="tab-profile" class="tab-content container" style="display:none;">
+    <!-- PROFILE -->
+    <div id="tab-profile" class="container" style="display:none;">
       <div class="page-title">My <span>Profile</span></div>
       <div id="profile-content"></div>
     </div>
 
-  </div><!-- end content area -->
+    <!-- GUIDE -->
+    <div id="tab-guide" class="container" style="display:none;">
+      <div class="page-title">User <span>Guide</span></div>
+      <div id="guide-content"></div>
+    </div>
 
-  <!-- BOTTOM NAV -->
+  </div><!-- end scroll -->
+
   <nav class="bottom-nav" id="bottom-nav">
     <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Dashboard
+      Home
     </div>
     <div class="nav-item" id="nav-tasks" onclick="switchTab('tasks')">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -533,153 +320,115 @@ tr:last-child td{border-bottom:none;}
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profile
     </div>
+    <div class="nav-item" id="nav-guide" onclick="switchTab('guide')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Guide
+    </div>
   </nav>
 </div>
 
 <!-- ========== MODALS ========== -->
 
-<!-- Add Company Modal -->
-<div class="modal-overlay hidden" id="modal-add-company">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Register New Company</div>
-    <div id="co-form-alert" class="alert hidden"></div>
-    <div class="form-group">
-      <label>Company Name *</label>
-      <input type="text" id="co-name-input" placeholder="e.g. Acme Nigeria Ltd"/>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Industry</label>
-        <input type="text" id="co-industry" placeholder="e.g. Technology"/>
-      </div>
-      <div class="form-group">
-        <label>Country</label>
-        <input type="text" id="co-country" placeholder="e.g. Nigeria"/>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Address</label>
-      <input type="text" id="co-address" placeholder="Company address"/>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Phone</label>
-        <input type="tel" id="co-phone" placeholder="+234..."/>
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="co-email" placeholder="info@company.com"/>
-      </div>
-    </div>
-    <div class="section-divider">Admin Account</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Admin Name *</label>
-        <input type="text" id="co-admin-name" placeholder="Full name"/>
-      </div>
-      <div class="form-group">
-        <label>Staff ID *</label>
-        <input type="text" id="co-admin-id" placeholder="e.g. MGR001"/>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Password *</label>
-        <input type="password" id="co-admin-pw" placeholder="Min 6 characters"/>
-      </div>
-      <div class="form-group">
-        <label>Confirm Password *</label>
-        <input type="password" id="co-admin-pw2" placeholder="Repeat password"/>
-      </div>
-    </div>
-    <div style="display:flex;gap:.75rem;margin-top:.5rem;">
-      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-add-company')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="registerCompany()">Create Company</button>
-    </div>
-  </div>
-</div>
-
-<!-- Register Staff Modal -->
+<!-- Register Staff -->
 <div class="modal-overlay hidden" id="modal-register-staff">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Register New Staff</div>
+    <div class="modal-title" id="staff-modal-title">Register New Staff</div>
     <div id="staff-form-alert" class="alert hidden"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Full Name *</label>
-        <input type="text" id="s-name" placeholder="Full name"/>
+      <div class="form-group"><label>Full Name <span class="req">*</span></label><input type="text" id="s-name"/></div>
+      <div class="form-group"><label>Staff ID <span class="req">*</span></label><input type="text" id="s-id"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Email</label><input type="email" id="s-email"/></div>
+      <div class="form-group"><label>Phone</label><input type="tel" id="s-phone"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Department <span class="req">*</span></label>
+        <select id="s-dept"><option value="">Select department</option></select>
       </div>
-      <div class="form-group">
-        <label>Staff ID *</label>
-        <input type="text" id="s-id" placeholder="e.g. STF002"/>
+      <div class="form-group"><label>Job Role <span class="req">*</span></label>
+        <select id="s-role"><option value="">Select role</option></select>
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="s-email" placeholder="staff@company.com"/>
-      </div>
-      <div class="form-group">
-        <label>Job Role *</label>
-        <input type="text" id="s-role" placeholder="e.g. Sales Executive"/>
+      <div class="form-group"><label>Password <span class="req">*</span></label><input type="password" id="s-pw"/></div>
+      <div class="form-group"><label>System Role <span class="req">*</span></label>
+        <select id="s-sys-role"><option value="staff">Staff</option><option value="manager">Manager</option></select>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Department</label>
-        <input type="text" id="s-dept" placeholder="e.g. Marketing"/>
-      </div>
-      <div class="form-group">
-        <label>Phone</label>
-        <input type="tel" id="s-phone" placeholder="+234..."/>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Password *</label>
-        <input type="password" id="s-pw" placeholder="Min 6 characters"/>
-      </div>
-      <div class="form-group">
-        <label>System Role *</label>
-        <select id="s-sys-role">
-          <option value="staff">Staff</option>
-          <option value="manager">Manager</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:.75rem;margin-top:.5rem;">
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-register-staff')">Cancel</button>
-      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="registerStaff()">Register Staff</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveStaffMember()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Sign Out Confirmation Modal -->
+<!-- Dept/Job Roles Modal -->
+<div class="modal-overlay hidden" id="modal-dept-jobs">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Departments & Job Roles</div>
+    <div class="tabs">
+      <button class="tab active" id="dj-tab-dept" onclick="switchDJTab('dept')">Departments</button>
+      <button class="tab" id="dj-tab-roles" onclick="switchDJTab('roles')">Job Roles</button>
+    </div>
+    <div id="dj-dept-panel">
+      <div style="display:flex;gap:.6rem;margin-bottom:.75rem;">
+        <input type="text" id="new-dept-input" placeholder="New department name" style="flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"/>
+        <button class="btn btn-primary btn-sm" onclick="addDept()">Add</button>
+      </div>
+      <div id="dept-list"></div>
+    </div>
+    <div id="dj-roles-panel" style="display:none;">
+      <div style="display:flex;gap:.6rem;margin-bottom:.75rem;">
+        <input type="text" id="new-role-input" placeholder="New job role" style="flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"/>
+        <button class="btn btn-primary btn-sm" onclick="addJobRole()">Add</button>
+      </div>
+      <div id="roles-list"></div>
+    </div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-dept-jobs')">Done</button>
+  </div>
+</div>
+
+<!-- Sign Out Confirm -->
 <div class="modal-overlay hidden" id="modal-signout">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Confirm Sign Out</div>
     <div id="signout-alert" class="alert hidden"></div>
-    <div style="background:var(--bg3);border-radius:10px;padding:1rem;margin-bottom:1rem;">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem;">Sign-out location will be captured:</div>
-      <div class="location-indicator" id="signout-loc-indicator" style="margin-top:0;">
+    <div style="background:var(--bg3);border-radius:10px;padding:.9rem;margin-bottom:.9rem;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;">Sign-out location:</div>
+      <div class="loc-box" style="margin-top:0;background:var(--bg);">
         <div class="loc-dot locating" id="signout-loc-dot"></div>
-        <span class="loc-text" id="signout-loc-text">Acquiring location…</span>
+        <span style="font-size:12px;color:var(--text2);" id="signout-loc-text">Acquiring location…</span>
       </div>
     </div>
-    <div id="task-summary-preview" style="margin-bottom:1rem;"></div>
+    <div id="signout-task-preview"></div>
     <div style="display:flex;gap:.75rem;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-signout')">Cancel</button>
-      <button class="btn btn-danger" style="flex:1;justify-content:center;" id="confirm-signout-btn" onclick="confirmSignOut()">
-        Sign Out
-      </button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="confirmSignOut()">Confirm Sign Out</button>
     </div>
   </div>
 </div>
 
-<!-- Staff Detail Modal -->
+<!-- Task Review Modal -->
+<div class="modal-overlay hidden" id="modal-review">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Review Tasks Before Submission</div>
+    <div id="review-alert" class="alert hidden"></div>
+    <div id="review-task-list"></div>
+    <div id="review-totals" style="margin-top:.75rem;"></div>
+    <div style="font-size:12px;color:var(--text3);margin:.75rem 0;line-height:1.6;">By submitting, you confirm all tasks are complete and accurate. You will be signed out after submission.</div>
+    <div style="display:flex;gap:.75rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-review')">← Edit Tasks</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="finalSubmitSignOut()">Submit & Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Detail -->
 <div class="modal-overlay hidden" id="modal-staff-detail">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -688,7 +437,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- Report Detail Modal -->
+<!-- Report Detail -->
 <div class="modal-overlay hidden" id="modal-report-detail">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -697,7 +446,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- User Menu Modal -->
+<!-- User Menu -->
 <div class="modal-overlay hidden" id="modal-user-menu">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -705,855 +454,913 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- Company Profile Modal -->
+<div class="modal-overlay hidden" id="modal-co-profile">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Company Profile</div>
+    <div id="co-profile-alert" class="alert hidden"></div>
+    <div class="form-group"><label>Company Name <span class="req">*</span></label><input type="text" id="cp-name"/></div>
+    <div class="form-group"><label>Address</label><input type="text" id="cp-address"/></div>
+    <div class="form-group"><label>Contact Person</label><input type="text" id="cp-contact"/></div>
+    <div class="form-group"><label>Official Email</label><input type="email" id="cp-email"/></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="cp-phone"/></div>
+    <div class="form-group"><label>Industry</label><input type="text" id="cp-industry"/></div>
+    <div class="form-group"><label>Country</label><input type="text" id="cp-country"/></div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-co-profile')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveCoProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ============================================================
-//  DATA LAYER — localStorage with multi-company support
-// ============================================================
-const DB = {
-  get(key){try{return JSON.parse(localStorage.getItem(key));}catch{return null;}},
-  set(key,val){localStorage.setItem(key,JSON.stringify(val));},
-  del(key){localStorage.removeItem(key);}
+// ========================================
+//  DATA LAYER
+// ========================================
+const DB={
+  get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
+  del:k=>localStorage.removeItem(k)
 };
+const getCompanies=()=>DB.get('cwx_companies')||[];
+const saveCompanies=c=>DB.set('cwx_companies',c);
+const getCompany=id=>getCompanies().find(c=>c.id===id);
+const getStaff=cid=>DB.get('cwx_staff_'+cid)||[];
+const saveStaff=(cid,s)=>DB.set('cwx_staff_'+cid,s);
+const getLogs=cid=>DB.get('cwx_logs_'+cid)||[];
+const saveLogs=(cid,l)=>DB.set('cwx_logs_'+cid,l);
+const getDepts=cid=>DB.get('cwx_depts_'+cid)||['Management','Sales','Operations','Finance','HR','IT','Marketing'];
+const saveDepts=(cid,d)=>DB.set('cwx_depts_'+cid,d);
+const getJobRoles=cid=>DB.get('cwx_roles_'+cid)||['General Manager','Sales Executive','Accountant','HR Officer','IT Support','Marketing Officer','Operations Staff'];
+const saveJobRoles=(cid,r)=>DB.set('cwx_roles_'+cid,r);
 
-function getCompanies(){return DB.get('cwx_companies')||[];}
-function saveCompanies(c){DB.set('cwx_companies',c);}
-function getCompany(id){return getCompanies().find(c=>c.id===id);}
-
-function getStaff(companyId){return DB.get('cwx_staff_'+companyId)||[];}
-function saveStaff(companyId,staff){DB.set('cwx_staff_'+companyId,staff);}
-
-function getLogs(companyId){return DB.get('cwx_logs_'+companyId)||[];}
-function saveLogs(companyId,logs){DB.set('cwx_logs_'+companyId,logs);}
-
-// ============================================================
+// ========================================
 //  STATE
-// ============================================================
-let state = {
-  companyId: null,
-  user: null,
-  signedIn: false,
-  todayLog: null,
-  tasks: [],
-  currentLocation: null,
-  tab: 'dashboard'
-};
+// ========================================
+let S={companyId:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null,signoutLoc:null,reportTab:'daily',editingStaffId:null};
 
-// ============================================================
+// ========================================
 //  THEME
-// ============================================================
+// ========================================
 function toggleTheme(){
-  const t = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',t);
-  DB.set('cwx_theme',t);
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);DB.set('cwx_theme',t);
 }
-(function(){const t=DB.get('cwx_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+(()=>{const t=DB.get('cwx_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
 
-// ============================================================
+// ========================================
 //  CLOCK
-// ============================================================
+// ========================================
 function updateClock(){
-  const now=new Date();
-  const t=now.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const d=now.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const cl=document.getElementById('live-clock');
-  const dl=document.getElementById('live-date');
-  if(cl)cl.textContent=t;
-  if(dl)dl.textContent=d;
+  const n=new Date();
+  const c=document.getElementById('live-clock');
+  const d=document.getElementById('live-date');
+  if(c)c.textContent=n.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(d)d.textContent=n.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 }
 setInterval(updateClock,1000);
 
-// ============================================================
+// ========================================
 //  LOCATION
-// ============================================================
-function getLocation(callback){
-  if(!navigator.geolocation){callback(null,'Geolocation not supported');return;}
+// ========================================
+function getLocation(cb){
+  if(!navigator.geolocation){cb(null,'Geolocation not supported');return;}
   navigator.geolocation.getCurrentPosition(
-    pos=>{
-      const{latitude:lat,longitude:lng,accuracy}=pos.coords;
-      const acc=Math.round(accuracy);
-      reverseGeocode(lat,lng,addr=>{
-        callback({lat,lng,accuracy:acc,address:addr,timestamp:new Date().toISOString()});
-      });
-    },
-    err=>{callback(null,err.message);},
+    p=>{const{latitude:lat,longitude:lng,accuracy}=p.coords;
+      reverseGeocode(lat,lng,addr=>cb({lat,lng,accuracy:Math.round(accuracy),address:addr,timestamp:new Date().toISOString()}));},
+    e=>cb(null,e.message),
     {enableHighAccuracy:true,timeout:15000,maximumAge:0}
   );
 }
-
 function reverseGeocode(lat,lng,cb){
   fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-    .then(r=>r.json())
-    .then(d=>{
+    .then(r=>r.json()).then(d=>{
       const a=d.address||{};
-      const parts=[a.road,a.suburb||a.neighbourhood,a.city||a.town||a.village,a.state,a.country].filter(Boolean);
-      cb(parts.join(', ')||d.display_name||`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    })
-    .catch(()=>cb(`${lat.toFixed(5)}, ${lng.toFixed(5)}`));
+      cb([a.road,a.suburb||a.neighbourhood,a.city||a.town||a.village,a.state,a.country].filter(Boolean).join(', ')||`${lat.toFixed(5)},${lng.toFixed(5)}`);
+    }).catch(()=>cb(`${lat.toFixed(5)},${lng.toFixed(5)}`));
 }
-
-function updateLocationUI(dotId,textId,status,msg){
+function captureLocation(dotId,txtId,cb){
   const dot=document.getElementById(dotId);
-  const txt=document.getElementById(textId);
-  if(!dot||!txt)return;
-  dot.className='loc-dot '+status;
-  txt.textContent=msg;
-}
-
-function captureLocation(dotId,textId,callback){
-  updateLocationUI(dotId,textId,'locating','Acquiring precise location…');
+  const txt=document.getElementById(txtId);
+  if(dot)dot.className='loc-dot locating';
+  if(txt)txt.textContent='Acquiring precise location…';
   getLocation((loc,err)=>{
     if(loc){
-      const msg=`📍 ${loc.address} (±${loc.accuracy}m)`;
-      updateLocationUI(dotId,textId,'located',msg);
-      if(callback)callback(loc);
+      if(dot)dot.className='loc-dot located';
+      if(txt)txt.textContent=`📍 ${loc.address} (±${loc.accuracy}m)`;
+      if(cb)cb(loc);
     } else {
-      updateLocationUI(dotId,textId,'failed','Location unavailable: '+err);
-      if(callback)callback(null);
+      if(dot)dot.className='loc-dot failed';
+      if(txt)txt.textContent='Location unavailable: '+err;
+      if(cb)cb(null);
     }
   });
 }
 
-// ============================================================
+// ========================================
 //  INIT
-// ============================================================
+// ========================================
 window.addEventListener('load',()=>{
-  updateClock();
-  renderCompanyScreen();
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
+  updateClock();renderCompanyScreen();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
   window.addEventListener('online',()=>document.getElementById('offline-banner').classList.add('hidden'));
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
-  // Capture location early on dashboard
-  captureLocation('loc-dot','loc-text',loc=>{state.currentLocation=loc;});
+  captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
 });
 
-// ============================================================
+// ========================================
 //  SCREENS
-// ============================================================
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-function goBack(from,to){
-  showScreen(to);
-  if(to==='company-screen')renderCompanyScreen();
-}
+// ========================================
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-// ============================================================
-//  COMPANY SCREEN
-// ============================================================
+// ========================================
+//  COMPANY SELECT
+// ========================================
 function renderCompanyScreen(){
+  const cos=getCompanies();
   const list=document.getElementById('company-list');
-  const companies=getCompanies();
-  if(!companies.length){
-    list.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:14px;">No companies registered yet</div>`;
-    return;
-  }
-  list.innerHTML=companies.map(co=>`
-    <div class="company-card" onclick="selectCompany('${co.id}')">
-      <div class="co-icon" style="background:${co.color||'var(--bg4)'};color:${co.textColor||'var(--accent)'};">${co.name.charAt(0).toUpperCase()}</div>
-      <div>
-        <div style="font-weight:600;font-size:15px;">${esc(co.name)}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(co.industry||'')} ${co.country?'· '+esc(co.country):''}</div>
-      </div>
-      <svg style="margin-left:auto;color:var(--text3);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-  `).join('');
+  if(!cos.length){list.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:13px;">No companies yet.<br><a href="admin.html" style="color:var(--accent);">Set up in Admin Portal →</a></div>`;return;}
+  list.innerHTML=cos.map(co=>`
+    <div onclick="selectCompany('${co.id}')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:44px;height:44px;border-radius:10px;background:${co.color||'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:${co.textColor||'var(--accent)'};flex-shrink:0;">${co.name.charAt(0).toUpperCase()}</div>
+      <div><div style="font-weight:600;font-size:15px;">${esc(co.name)}</div><div style="font-size:11px;color:var(--text3);">${esc(co.industry||'')}${co.country?' · '+esc(co.country):''}</div></div>
+      <svg style="margin-left:auto;color:var(--text3);" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`).join('');
 }
 
 function selectCompany(id){
-  state.companyId=id;
+  S.companyId=id;
   const co=getCompany(id);
-  document.getElementById('login-co-initial').textContent=co.name.charAt(0).toUpperCase();
-  document.getElementById('login-co-name').innerHTML=esc(co.name);
-  document.getElementById('login-co-sub').textContent='Staff Portal';
-  document.getElementById('login-id').value='';
-  document.getElementById('login-pw').value='';
-  hideAlert('login-alert');
-  showScreen('login-screen');
+  document.getElementById('login-co-mark').textContent=co.name.charAt(0).toUpperCase();
+  document.getElementById('login-co-name').textContent=co.name;
+  document.getElementById('login-id').value='';document.getElementById('login-pw').value='';
+  hideAlert('login-alert');showScreen('login-screen');
 }
 
-// ============================================================
-//  ADD COMPANY
-// ============================================================
-function showAddCompany(){
-  clearForm(['co-name-input','co-industry','co-country','co-address','co-phone','co-email','co-admin-name','co-admin-id','co-admin-pw','co-admin-pw2']);
-  hideAlert('co-form-alert');
-  showModal('modal-add-company');
-}
-
-function registerCompany(){
-  const name=val('co-name-input');
-  const adminName=val('co-admin-name');
-  const adminId=val('co-admin-id');
-  const adminPw=val('co-admin-pw');
-  const adminPw2=val('co-admin-pw2');
-  if(!name||!adminName||!adminId||!adminPw){showAlert('co-form-alert','All required fields must be filled.','danger');return;}
-  if(adminPw!==adminPw2){showAlert('co-form-alert','Passwords do not match.','danger');return;}
-  if(adminPw.length<6){showAlert('co-form-alert','Password must be at least 6 characters.','danger');return;}
-
-  const id='co_'+Date.now();
-  const companies=getCompanies();
-  if(companies.find(c=>c.name.toLowerCase()===name.toLowerCase())){showAlert('co-form-alert','A company with this name already exists.','danger');return;}
-
-  const colors=[
-    {bg:'rgba(0,212,170,.15)',txt:'#00d4aa'},
-    {bg:'rgba(0,153,255,.15)',txt:'#0099ff'},
-    {bg:'rgba(245,158,11,.15)',txt:'#f59e0b'},
-    {bg:'rgba(239,68,68,.15)',txt:'#ef4444'}
-  ];
-  const c=colors[companies.length%colors.length];
-
-  const newCompany={
-    id,name,industry:val('co-industry'),country:val('co-country'),
-    address:val('co-address'),phone:val('co-phone'),email:val('co-email'),
-    color:c.bg,textColor:c.txt,createdAt:new Date().toISOString()
-  };
-  companies.push(newCompany);
-  saveCompanies(companies);
-
-  // Create admin
-  const staff=getStaff(id);
-  staff.push({
-    id:adminId,name:adminName,email:val('co-email'),
-    role:adminName,department:'Management',phone:val('co-phone'),
-    password:adminPw,systemRole:'manager',
-    companyId:id,createdAt:new Date().toISOString()
-  });
-  saveStaff(id,staff);
-
-  closeModal('modal-add-company');
-  renderCompanyScreen();
-  showAlert('co-form-alert','Company created successfully!','success');
-  setTimeout(()=>selectCompany(id),800);
-}
-
-// ============================================================
+// ========================================
 //  LOGIN
-// ============================================================
+// ========================================
 function doLogin(){
-  const staffId=val('login-id').trim();
-  const pw=val('login-pw');
-  if(!staffId||!pw){showAlert('login-alert','Please enter your Staff ID and Password.','danger');return;}
-
-  const staff=getStaff(state.companyId);
-  const user=staff.find(s=>s.id===staffId&&s.password===pw);
-  if(!user){showAlert('login-alert','Invalid Staff ID or Password.','danger');return;}
-
-  state.user=user;
-  loadUserSession();
-  showScreen('main-screen');
+  const sid=document.getElementById('login-id').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  if(!sid||!pw){showAlert('login-alert','Enter Staff ID and password.','danger');return;}
+  const staff=getStaff(S.companyId);
+  const user=staff.find(s=>s.id===sid&&s.password===pw);
+  if(!user){showAlert('login-alert','Invalid Staff ID or password.','danger');return;}
+  S.user=user;loadSession();showScreen('main-screen');
 }
 
-function loadUserSession(){
-  const u=state.user;
+// ========================================
+//  SESSION
+// ========================================
+function loadSession(){
+  const u=S.user;
   document.getElementById('user-avatar-btn').textContent=initials(u.name);
-
-  // Load today's log
   const today=todayStr();
-  const logs=getLogs(state.companyId);
-  state.todayLog=logs.find(l=>l.staffId===u.id&&l.date===today)||null;
-  state.signedIn=state.todayLog&&state.todayLog.signInTime&&!state.todayLog.signOutTime;
-  state.tasks=state.todayLog?state.todayLog.tasks||[]:[];
-
-  // Show manager tabs
-  if(u.systemRole==='manager'){
-    document.getElementById('nav-reports').classList.remove('hidden');
-    document.getElementById('nav-staff').classList.remove('hidden');
-  } else {
-    document.getElementById('nav-reports').classList.add('hidden');
-    document.getElementById('nav-staff').classList.add('hidden');
-  }
-
-  updateDashboard();
-  renderTasks();
-  captureLocation('loc-dot','loc-text',loc=>{state.currentLocation=loc;});
+  const logs=getLogs(S.companyId);
+  S.todayLog=logs.find(l=>l.staffId===u.id&&l.date===today)||null;
+  S.signedIn=!!(S.todayLog&&S.todayLog.signInTime&&!S.todayLog.signOutTime);
+  S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
+  const isManager=u.systemRole==='manager';
+  ['nav-reports','nav-staff'].forEach(id=>{
+    document.getElementById(id).classList.toggle('hidden',!isManager);
+  });
+  updateDashboard();renderTasks();
+  captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
+  // Set default report dates
+  const firstDay=new Date();firstDay.setDate(1);
+  document.getElementById('rpt-from').value=firstDay.toISOString().split('T')[0];
+  document.getElementById('rpt-to').value=today;
+  populateRptDeptFilter();
 }
 
-// ============================================================
+// ========================================
 //  DASHBOARD
-// ============================================================
+// ========================================
 function updateDashboard(){
-  const log=state.todayLog;
-  document.getElementById('stat-status').textContent=
-    !log?'Not Signed In': log.signOutTime?'Signed Out':'Signed In';
-  document.getElementById('stat-signin').textContent=
-    log&&log.signInTime?log.signInTime.split('T')[1].substring(0,5):'—';
-  document.getElementById('stat-tasks').textContent=state.tasks.length;
-
-  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
-  document.getElementById('stat-value').textContent='₦'+total.toLocaleString('en-NG');
-
+  const log=S.todayLog;
+  document.getElementById('stat-status').textContent=!log?'Not In':log.signOutTime?'Signed Out':'Signed In';
+  document.getElementById('stat-signin').textContent=log&&log.signInTime?fmtTime(log.signInTime):'—';
+  document.getElementById('stat-tasks').textContent=S.tasks.length;
+  const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
+  document.getElementById('stat-hours').textContent=minsToHours(totalMins);
   const area=document.getElementById('signin-btn-area');
-  const co=getCompany(state.companyId);
-  if(!log||(!log.signInTime)){
-    area.innerHTML=`
-      <div style="background:rgba(0,212,170,.06);border:1.5px dashed var(--accent);border-radius:12px;padding:1.25rem;text-align:center;">
-        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;">You have not signed in today. Sign in to start tracking your day.</p>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.85rem;" onclick="doSignIn()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Sign In for ${co?esc(co.name):'Today'}
-        </button>
-      </div>`;
+  const co=getCompany(S.companyId);
+  if(!log||!log.signInTime){
+    area.innerHTML=`<div style="background:rgba(0,212,170,.05);border:1.5px dashed var(--accent);border-radius:12px;padding:1.25rem;text-align:center;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:.9rem;">Sign in to start tracking your working day.</p>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.8rem;" onclick="doSignIn()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In${co?' — '+esc(co.name):''}
+      </button></div>`;
   } else if(!log.signOutTime){
-    area.innerHTML=`
-      <div style="background:rgba(239,68,68,.06);border:1.5px dashed var(--danger);border-radius:12px;padding:1.25rem;text-align:center;">
-        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;">You are currently signed in. Complete your tasks before signing out.</p>
-        <button class="btn btn-danger" style="width:100%;justify-content:center;padding:.85rem;" onclick="initiateSignOut()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Sign Out
-        </button>
-      </div>`;
+    area.innerHTML=`<div style="background:rgba(239,68,68,.05);border:1.5px dashed var(--danger);border-radius:12px;padding:1.25rem;text-align:center;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:.9rem;">You are signed in. Add your tasks before signing out.</p>
+      <button class="btn btn-danger" style="width:100%;justify-content:center;padding:.8rem;" onclick="initiateSignOut()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button></div>`;
   } else {
-    area.innerHTML=`
-      <div style="background:rgba(34,197,94,.06);border:1.5px solid rgba(34,197,94,.2);border-radius:12px;padding:1.25rem;text-align:center;">
-        <span class="badge badge-success" style="font-size:13px;padding:.4rem 1rem;">Day Complete ✓</span>
-        <p style="font-size:13px;color:var(--text2);margin-top:.75rem;">You signed out at ${log.signOutTime.split('T')[1].substring(0,5)}. See you tomorrow!</p>
-      </div>`;
+    area.innerHTML=`<div style="background:rgba(34,197,94,.05);border:1.5px solid rgba(34,197,94,.2);border-radius:12px;padding:1.25rem;text-align:center;">
+      <span class="badge badge-success" style="font-size:13px;padding:.4rem 1rem;">Day Complete ✓</span>
+      <p style="font-size:13px;color:var(--text2);margin-top:.6rem;">Signed out at ${fmtTime(log.signOutTime)}.</p>
+    </div>`;
   }
 }
 
-// ============================================================
+// ========================================
 //  SIGN IN
-// ============================================================
+// ========================================
 function doSignIn(){
-  if(!state.currentLocation){
-    showAlert('main-alert','Waiting for location. Please try again in a moment.','warn');
-    return;
-  }
+  if(!S.currentLoc){showAlert('main-alert','Location not yet acquired. Please wait a moment.','warn');return;}
   hideAlert('main-alert');
   const now=new Date();
-  const log={
-    id:'log_'+Date.now(),
-    staffId:state.user.id,
-    staffName:state.user.name,
-    companyId:state.companyId,
-    date:todayStr(),
-    signInTime:now.toISOString(),
-    signInLocation:state.currentLocation,
-    signOutTime:null,
-    signOutLocation:null,
-    tasks:[]
-  };
-  const logs=getLogs(state.companyId);
-  logs.push(log);
-  saveLogs(state.companyId,logs);
-  state.todayLog=log;
-  state.signedIn=true;
-  state.tasks=[];
-  updateDashboard();
-  renderTasks();
-  showAlert('main-alert','Signed in successfully at '+now.toLocaleTimeString('en-NG'),'success');
+  const log={id:'log_'+Date.now(),staffId:S.user.id,staffName:S.user.name,staffDept:S.user.department||'',companyId:S.companyId,date:todayStr(),signInTime:now.toISOString(),signInLocation:S.currentLoc,signOutTime:null,signOutLocation:null,tasks:[],submitted:false};
+  const logs=getLogs(S.companyId);logs.push(log);saveLogs(S.companyId,logs);
+  S.todayLog=log;S.signedIn=true;S.tasks=[];
+  updateDashboard();renderTasks();
+  showAlert('main-alert','Signed in at '+fmtTime(now.toISOString()),'success');
   setTimeout(()=>hideAlert('main-alert'),3000);
 }
 
-// ============================================================
-//  SIGN OUT
-// ============================================================
+// ========================================
+//  SIGN OUT (requires review first)
+// ========================================
 function initiateSignOut(){
-  if(state.tasks.length===0){
-    showAlert('main-alert','You must add at least one completed task before signing out.','warn');
-    return;
-  }
-  const invalid=state.tasks.filter(t=>!t.description||!t.description.trim()||(parseFloat(t.value)||0)===0);
-  if(invalid.length>0){
-    showAlert('main-alert','All tasks must have a description and a value greater than ₦0.','warn');
-    switchTab('tasks');
-    return;
-  }
-  hideAlert('main-alert');
-  // Preview tasks
-  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
-  document.getElementById('task-summary-preview').innerHTML=`
-    <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem;">Tasks completed today:</div>
-    <div style="background:var(--bg3);border-radius:8px;padding:.75rem;font-size:13px;">
-      ${state.tasks.map((t,i)=>`<div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span>${i+1}. ${esc(t.description.substring(0,40))}…</span><span style="color:var(--success);font-family:var(--font-mono);">₦${(parseFloat(t.value)||0).toLocaleString()}</span></div>`).join('')}
-      <div style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.5rem;display:flex;justify-content:space-between;font-weight:600;"><span>Total</span><span style="color:var(--success);font-family:var(--font-mono);">₦${total.toLocaleString('en-NG')}</span></div>
-    </div>`;
+  if(S.tasks.length===0){showAlert('main-alert','Add at least one completed task before signing out.','warn');switchTab('tasks');return;}
+  const invalid=S.tasks.filter(t=>!t.description||!t.description.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0));
+  if(invalid.length){showAlert('main-alert','All tasks must have a description, duration, and value before signing out.','warn');switchTab('tasks');return;}
+  showReview();
+}
 
-  // Get signout location
-  captureLocation('signout-loc-dot','signout-loc-text',loc=>{state.signoutLocation=loc;});
+function showReview(){
+  if(!S.todayLog||!S.todayLog.signInTime){showAlert('main-alert','Please sign in first.','warn');return;}
+  if(S.tasks.length===0){showAlert('main-alert','No tasks to review.','warn');return;}
+  const invalid=S.tasks.filter(t=>!t.description?.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0));
+  if(invalid.length){showAlert('main-alert','All tasks need description, duration, and value > 0.','warn');return;}
+  hideAlert('review-alert');
+  const list=document.getElementById('review-task-list');
+  list.innerHTML=S.tasks.map((t,i)=>`
+    <div class="review-task-row">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+        <span class="task-num">Task ${i+1}</span>
+        <span class="badge badge-accent" style="font-family:var(--font-mono);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+      </div>
+      <div style="font-size:13px;margin-bottom:.3rem;">${esc(t.description)}</div>
+      <div style="display:flex;gap:1rem;font-size:12px;color:var(--text3);">
+        <span>⏱ ${t.duration||0} min (${minsToHours(parseInt(t.duration)||0)})</span>
+      </div>
+    </div>`).join('');
+  const totalVal=S.tasks.reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);
+  const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
+  document.getElementById('review-totals').innerHTML=`
+    <div class="total-row"><span style="font-size:13px;">Total Value Added</span><span style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--success);">₦${fmtNum(totalVal)}</span></div>
+    <div class="total-row" style="margin-top:.5rem;"><span style="font-size:13px;">Total Task Hours</span><span style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent);">${minsToHours(totalMins)}</span></div>`;
+  showModal('modal-review');
+}
+
+function finalSubmitSignOut(){
+  S.signoutLoc=null;
+  captureLocation('signout-loc-dot','signout-loc-text',loc=>{S.signoutLoc=loc;});
+  closeModal('modal-review');
+  // Build preview
+  const totalVal=S.tasks.reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);
+  const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
+  document.getElementById('signout-task-preview').innerHTML=`
+    <div style="background:var(--bg3);border-radius:8px;padding:.75rem;margin-bottom:.75rem;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text2);">Tasks</span><span>${S.tasks.length}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:.3rem;"><span style="color:var(--text2);">Total Hours</span><span>${minsToHours(totalMins)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:.3rem;"><span style="color:var(--text2);">Total Value</span><span style="color:var(--success);font-family:var(--font-mono);">₦${fmtNum(totalVal)}</span></div>
+    </div>`;
   showModal('modal-signout');
 }
 
 function confirmSignOut(){
-  if(!state.signoutLocation){
-    showAlert('signout-alert','Location not yet acquired. Please wait.','warn');
-    return;
-  }
   const now=new Date();
-  const logs=getLogs(state.companyId);
-  const idx=logs.findIndex(l=>l.id===state.todayLog.id);
+  const logs=getLogs(S.companyId);
+  const idx=logs.findIndex(l=>l.id===S.todayLog.id);
   if(idx>-1){
     logs[idx].signOutTime=now.toISOString();
-    logs[idx].signOutLocation=state.signoutLocation;
-    logs[idx].tasks=state.tasks;
-    saveLogs(state.companyId,logs);
-    state.todayLog=logs[idx];
+    logs[idx].signOutLocation=S.signoutLoc||null;
+    logs[idx].tasks=S.tasks;
+    logs[idx].submitted=true;
+    saveLogs(S.companyId,logs);S.todayLog=logs[idx];
   }
-  state.signedIn=false;
-  closeModal('modal-signout');
-  updateDashboard();
-  showAlert('main-alert','Signed out successfully at '+now.toLocaleTimeString('en-NG'),'success');
+  S.signedIn=false;
+  closeModal('modal-signout');updateDashboard();renderTasks();
+  showAlert('main-alert','Signed out at '+fmtTime(now.toISOString()),'success');
   setTimeout(()=>hideAlert('main-alert'),3000);
 }
 
-// ============================================================
+// ========================================
 //  TASKS
-// ============================================================
+// ========================================
 function renderTasks(){
-  const container=document.getElementById('tasks-container');
-  const lockedMsg=document.getElementById('tasks-locked-msg');
+  const c=document.getElementById('tasks-container');
+  const locked=document.getElementById('tasks-locked-msg');
+  const soMsg=document.getElementById('tasks-sigout-msg');
   const addBtn=document.getElementById('add-task-btn');
   const footer=document.getElementById('tasks-footer');
-
-  if(!state.todayLog||!state.todayLog.signInTime){
-    lockedMsg.classList.remove('hidden');
-    addBtn.style.display='none';
-    footer.style.display='none';
-    container.innerHTML='';
+  if(!S.todayLog||!S.todayLog.signInTime){locked.classList.remove('hidden');soMsg.classList.add('hidden');addBtn.style.display='none';footer.style.display='none';c.innerHTML='';return;}
+  locked.classList.add('hidden');
+  const isLocked=!!S.todayLog.signOutTime;
+  soMsg.classList.toggle('hidden',!isLocked);
+  addBtn.style.display=isLocked?'none':'block';
+  footer.style.display=isLocked?'none':'block';
+  if(isLocked){
+    c.innerHTML=S.tasks.map((t,i)=>`
+      <div class="task-item">
+        <div class="task-header">
+          <span class="task-num">Task ${i+1}</span>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
+            <span class="badge badge-success" style="font-family:var(--font-mono);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+          </div>
+        </div>
+        <p style="font-size:13px;">${esc(t.description||'')}</p>
+      </div>`).join('')||'<p style="color:var(--text3);font-size:13px;">No tasks recorded.</p>';
     return;
   }
-  lockedMsg.classList.add('hidden');
-
-  if(state.todayLog.signOutTime){
-    addBtn.style.display='none';
-    container.innerHTML=state.tasks.map((t,i)=>`
-      <div class="task-item">
-        <div class="task-header">
-          <span class="task-num">Task ${i+1}</span>
-          <span class="badge badge-success">₦${(parseFloat(t.value)||0).toLocaleString('en-NG')}</span>
+  c.innerHTML=S.tasks.map((t,i)=>`
+    <div class="task-item">
+      <div class="task-header">
+        <span class="task-num">Task ${i+1}</span>
+        <button class="btn btn-sm btn-danger btn-icon" onclick="removeTask(${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="form-group" style="margin-bottom:.55rem;">
+        <textarea rows="2" placeholder="Describe the task…" style="resize:vertical;" onchange="updateTask(${i},'description',this.value)">${esc(t.description||'')}</textarea>
+      </div>
+      <div class="form-row" style="gap:.6rem;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Duration (minutes) <span class="req">*</span></label>
+          <input type="number" min="1" placeholder="e.g. 60" value="${t.duration||''}" onchange="updateTask(${i},'duration',this.value)" style="font-family:var(--font-mono);"/>
         </div>
-        <p style="font-size:14px;">${esc(t.description)}</p>
-      </div>`).join('')||'<p style="color:var(--text3);font-size:14px;">No tasks recorded.</p>';
-  } else {
-    addBtn.style.display='block';
-    footer.style.display='block';
-    container.innerHTML=state.tasks.map((t,i)=>`
-      <div class="task-item">
-        <div class="task-header">
-          <span class="task-num">Task ${i+1}</span>
-          <button class="btn btn-sm btn-danger btn-icon" onclick="removeTask(${i})" title="Remove">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Value Added (₦) <span class="req">*</span></label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="value-prefix">₦</span>
+            <input type="text" inputmode="numeric" placeholder="0" value="${t.value||''}"
+              onchange="updateTaskValue(${i},this.value)"
+              oninput="formatValueInput(this)"
+              style="font-family:var(--font-mono);flex:1;"/>
+          </div>
+          <div class="field-error" id="val-err-${i}" style="display:none;">Enter a valid amount > 0</div>
         </div>
-        <div class="form-group" style="margin-bottom:.5rem;">
-          <textarea rows="2" placeholder="Describe what you did…" style="resize:vertical;"
-            onchange="updateTask(${i},'description',this.value)">${esc(t.description||'')}</textarea>
-        </div>
-        <div class="value-field">
-          <span class="prefix">₦</span>
-          <input type="number" min="0" placeholder="Value added"
-            value="${t.value||''}"
-            onchange="updateTask(${i},'value',this.value)"
-            style="font-family:var(--font-mono);"/>
-        </div>
-      </div>`).join('');
-  }
-  updateTotalValueDisplay();
+      </div>
+    </div>`).join('');
+  updateTaskTotals();
 }
 
 function addTask(){
-  state.tasks.push({description:'',value:''});
-  renderTasks();
-  saveTodayTasks();
-  setTimeout(()=>{
-    const items=document.querySelectorAll('.task-item');
-    if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'center'});
-  },100);
+  S.tasks.push({description:'',duration:'',value:''});
+  renderTasks();saveTasks();
+  setTimeout(()=>{const items=document.querySelectorAll('.task-item');if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'center'});},80);
+}
+function removeTask(i){S.tasks.splice(i,1);renderTasks();saveTasks();}
+function updateTask(i,field,val){S.tasks[i][field]=val;updateTaskTotals();saveTasks();}
+function updateTaskValue(i,raw){
+  const num=parseFloat(raw.replace(/,/g,''))||0;
+  const err=document.getElementById('val-err-'+i);
+  if(err){err.style.display=num===0?'block':'none';}
+  S.tasks[i].value=fmtNum(num);updateTaskTotals();saveTasks();
+}
+function formatValueInput(el){
+  const pos=el.selectionStart;
+  const raw=el.value.replace(/[^0-9.]/g,'');
+  const num=parseFloat(raw);
+  if(!isNaN(num)&&raw){el.value=fmtNum(num);}
+  else if(!raw){el.value='';}
+}
+function updateTaskTotals(){
+  const totalVal=S.tasks.reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);
+  const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
+  const tv=document.getElementById('total-value-display');if(tv)tv.textContent='₦'+fmtNum(totalVal);
+  const th=document.getElementById('total-hours-display');if(th)th.textContent=minsToHours(totalMins);
+  const sm=document.getElementById('stat-hours');if(sm)sm.textContent=minsToHours(totalMins);
+  const st=document.getElementById('stat-tasks');if(st)st.textContent=S.tasks.length;
+}
+function saveTasks(){
+  if(!S.todayLog)return;
+  const logs=getLogs(S.companyId);
+  const idx=logs.findIndex(l=>l.id===S.todayLog.id);
+  if(idx>-1){logs[idx].tasks=S.tasks;saveLogs(S.companyId,logs);}
+  const ind=document.getElementById('tasks-save-indicator');
+  if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',1500);}
 }
 
-function removeTask(i){
-  state.tasks.splice(i,1);
-  renderTasks();
-  saveTodayTasks();
-}
-
-function updateTask(i,field,val){
-  state.tasks[i][field]=val;
-  updateTotalValueDisplay();
-  updateDashboard();
-  saveTodayTasks();
-}
-
-function saveTodayTasks(){
-  if(!state.todayLog)return;
-  const logs=getLogs(state.companyId);
-  const idx=logs.findIndex(l=>l.id===state.todayLog.id);
-  if(idx>-1){logs[idx].tasks=state.tasks;saveLogs(state.companyId,logs);}
-}
-
-function updateTotalValueDisplay(){
-  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
-  const el=document.getElementById('total-value-display');
-  if(el)el.textContent='₦'+total.toLocaleString('en-NG');
-  document.getElementById('stat-value').textContent='₦'+total.toLocaleString('en-NG');
-  document.getElementById('stat-tasks').textContent=state.tasks.length;
-}
-
-// ============================================================
+// ========================================
 //  STAFF MANAGEMENT
-// ============================================================
+// ========================================
 function renderStaffList(){
-  const staff=getStaff(state.companyId);
-  const container=document.getElementById('staff-list-container');
-  if(!staff.length){
-    container.innerHTML='<p style="color:var(--text3);font-size:14px;">No staff registered yet.</p>';
-    return;
-  }
-  container.innerHTML=staff.map(s=>`
+  const staff=getStaff(S.companyId);
+  const c=document.getElementById('staff-list-container');
+  if(!staff.length){c.innerHTML='<p style="color:var(--text3);font-size:13px;">No staff registered.</p>';return;}
+  c.innerHTML=staff.map(s=>`
     <div class="report-row" onclick="showStaffDetail('${s.id}')">
       <div class="report-avatar">${initials(s.name)}</div>
-      <div class="report-info">
-        <div class="report-name">${esc(s.name)}</div>
-        <div class="report-meta">${esc(s.id)} · ${esc(s.role||'')}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')} · ${esc(s.department||'')}</div>
       </div>
       <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
     </div>`).join('');
 }
 
-function showRegisterStaff(){
-  clearForm(['s-name','s-id','s-email','s-role','s-dept','s-phone','s-pw']);
-  document.getElementById('s-sys-role').value='staff';
+function showRegisterStaff(editId){
+  S.editingStaffId=editId||null;
+  document.getElementById('staff-modal-title').textContent=editId?'Edit Staff':'Register New Staff';
   hideAlert('staff-form-alert');
+  const depts=getDepts(S.companyId);
+  const roles=getJobRoles(S.companyId);
+  const ds=document.getElementById('s-dept');
+  ds.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  const rs=document.getElementById('s-role');
+  rs.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+  if(editId){
+    const u=getStaff(S.companyId).find(x=>x.id===editId);
+    if(u){
+      document.getElementById('s-name').value=u.name;
+      document.getElementById('s-id').value=u.id;
+      document.getElementById('s-id').disabled=true;
+      document.getElementById('s-email').value=u.email||'';
+      document.getElementById('s-phone').value=u.phone||'';
+      document.getElementById('s-dept').value=u.department||'';
+      document.getElementById('s-role').value=u.role||'';
+      document.getElementById('s-pw').value='';
+      document.getElementById('s-sys-role').value=u.systemRole||'staff';
+    }
+  } else {
+    ['s-name','s-id','s-email','s-phone','s-pw'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('s-id').disabled=false;
+    document.getElementById('s-dept').value='';document.getElementById('s-role').value='';
+    document.getElementById('s-sys-role').value='staff';
+  }
   showModal('modal-register-staff');
 }
 
-function registerStaff(){
-  const name=val('s-name');
-  const id=val('s-id');
-  const role=val('s-role');
-  const pw=val('s-pw');
-  if(!name||!id||!role||!pw){showAlert('staff-form-alert','Name, Staff ID, Job Role, and Password are required.','danger');return;}
-  if(pw.length<6){showAlert('staff-form-alert','Password must be at least 6 characters.','danger');return;}
-
-  const staff=getStaff(state.companyId);
-  if(staff.find(s=>s.id===id)){showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
-
-  staff.push({
-    id,name,email:val('s-email'),role,
-    department:val('s-dept'),phone:val('s-phone'),
-    password:pw,systemRole:val('s-sys-role'),
-    companyId:state.companyId,createdAt:new Date().toISOString()
-  });
-  saveStaff(state.companyId,staff);
-  closeModal('modal-register-staff');
-  renderStaffList();
+function saveStaffMember(){
+  const name=v('s-name'),id=v('s-id'),dept=v('s-dept'),role=v('s-role'),pw=v('s-pw'),sysRole=v('s-sys-role');
+  if(!name){showAlert('staff-form-alert','Full name is required.','danger');return;}
+  if(!dept){showAlert('staff-form-alert','Select a department.','danger');return;}
+  if(!role){showAlert('staff-form-alert','Select a job role.','danger');return;}
+  const staff=getStaff(S.companyId);
+  if(S.editingStaffId){
+    const idx=staff.findIndex(s=>s.id===S.editingStaffId);
+    if(idx>-1){
+      // Only manager can edit name
+      staff[idx].name=name;
+      staff[idx].email=v('s-email');staff[idx].phone=v('s-phone');
+      staff[idx].department=dept;staff[idx].role=role;staff[idx].systemRole=sysRole;
+      if(pw&&pw.length>=6)staff[idx].password=pw;
+    }
+  } else {
+    if(!id){showAlert('staff-form-alert','Staff ID is required.','danger');return;}
+    if(!pw||pw.length<6){showAlert('staff-form-alert','Password must be at least 6 characters.','danger');return;}
+    if(staff.find(s=>s.id===id)){showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
+    staff.push({id,name,email:v('s-email'),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
+  }
+  saveStaff(S.companyId,staff);closeModal('modal-register-staff');renderStaffList();
 }
 
 function showStaffDetail(staffId){
-  const staff=getStaff(state.companyId);
-  const s=staff.find(x=>x.id===staffId);
-  if(!s)return;
-  const logs=getLogs(state.companyId).filter(l=>l.staffId===staffId);
-  const totalDays=logs.filter(l=>l.signOutTime).length;
-  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
-
+  const staff=getStaff(S.companyId);
+  const s=staff.find(x=>x.id===staffId);if(!s)return;
+  const logs=getLogs(S.companyId).filter(l=>l.staffId===staffId);
+  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat((t.value||'').replace(/,/g,''))||0),0),0);
+  const totalMins=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseInt(t.duration)||0),0),0);
   document.getElementById('staff-detail-content').innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
-      <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(s.name)}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <div style="width:50px;height:50px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:19px;color:var(--accent);">${initials(s.name)}</div>
       <div>
-        <div style="font-size:17px;font-weight:600;">${esc(s.name)}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')}</div>
+        <div style="font-size:16px;font-weight:600;">${esc(s.name)}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')} · ${esc(s.department||'')}</div>
+        <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:3px;">${s.systemRole==='manager'?'Manager':'Staff'}</span>
       </div>
-      <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-left:auto;">${s.systemRole==='manager'?'Manager':'Staff'}</span>
     </div>
-    <div class="status-grid">
-      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${totalDays}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${totalVal.toLocaleString('en-NG')}</div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
     </div>
-    <div style="margin-top:1rem;">
-      ${s.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📧 ${esc(s.email)}</div>`:''}
-      ${s.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📱 ${esc(s.phone)}</div>`:''}
-      ${s.department?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">🏢 ${esc(s.department)}</div>`:''}
-    </div>
-    <div style="display:flex;gap:.75rem;margin-top:1rem;">
-      <button class="btn btn-sm ${s.systemRole==='manager'?'btn-danger':''}" style="flex:1;justify-content:center;"
-        onclick="toggleManagerRole('${s.id}')">
-        ${s.systemRole==='manager'?'Remove Manager Role':'Assign Manager Role'}
+    ${s.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(s.email)}</div>`:''}
+    ${s.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(s.phone)}</div>`:''}
+    <div style="display:flex;gap:.6rem;margin-top:.9rem;">
+      <button class="btn btn-sm" style="flex:1;justify-content:center;" onclick="closeModal('modal-staff-detail');showRegisterStaff('${s.id}')">Edit</button>
+      <button class="btn btn-sm ${s.systemRole==='manager'?'btn-danger':''}" style="flex:1;justify-content:center;" onclick="toggleManagerRole('${s.id}')">
+        ${s.systemRole==='manager'?'Remove Manager':'Make Manager'}
       </button>
     </div>`;
   showModal('modal-staff-detail');
 }
 
-function toggleManagerRole(staffId){
-  const staff=getStaff(state.companyId);
-  const idx=staff.findIndex(s=>s.id===staffId);
-  if(idx>-1){
-    staff[idx].systemRole=staff[idx].systemRole==='manager'?'staff':'manager';
-    saveStaff(state.companyId,staff);
-    closeModal('modal-staff-detail');
-    renderStaffList();
-  }
+function toggleManagerRole(sid){
+  const staff=getStaff(S.companyId);
+  const idx=staff.findIndex(s=>s.id===sid);
+  if(idx>-1){staff[idx].systemRole=staff[idx].systemRole==='manager'?'staff':'manager';saveStaff(S.companyId,staff);}
+  closeModal('modal-staff-detail');renderStaffList();
 }
 
-// ============================================================
+// ========================================
+//  DEPARTMENTS & JOB ROLES
+// ========================================
+function showDeptJobModal(){
+  renderDeptList();renderRolesList();showModal('modal-dept-jobs');
+}
+function switchDJTab(t){
+  document.getElementById('dj-dept-panel').style.display=t==='dept'?'block':'none';
+  document.getElementById('dj-roles-panel').style.display=t==='roles'?'block':'none';
+  document.getElementById('dj-tab-dept').classList.toggle('active',t==='dept');
+  document.getElementById('dj-tab-roles').classList.toggle('active',t==='roles');
+}
+function renderDeptList(){
+  const depts=getDepts(S.companyId);
+  document.getElementById('dept-list').innerHTML=depts.map((d,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
+      <span style="font-size:13px;">${esc(d)}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeDept(${i})" style="padding:.2rem .5rem;">✕</button>
+    </div>`).join('');
+}
+function addDept(){
+  const inp=document.getElementById('new-dept-input');
+  const val=inp.value.trim();if(!val)return;
+  const depts=getDepts(S.companyId);
+  if(!depts.includes(val)){depts.push(val);saveDepts(S.companyId,depts);}
+  inp.value='';renderDeptList();
+}
+function removeDept(i){
+  const depts=getDepts(S.companyId);depts.splice(i,1);saveDepts(S.companyId,depts);renderDeptList();
+}
+function renderRolesList(){
+  const roles=getJobRoles(S.companyId);
+  document.getElementById('roles-list').innerHTML=roles.map((r,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
+      <span style="font-size:13px;">${esc(r)}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeRole(${i})" style="padding:.2rem .5rem;">✕</button>
+    </div>`).join('');
+}
+function addJobRole(){
+  const inp=document.getElementById('new-role-input');
+  const val=inp.value.trim();if(!val)return;
+  const roles=getJobRoles(S.companyId);
+  if(!roles.includes(val)){roles.push(val);saveJobRoles(S.companyId,roles);}
+  inp.value='';renderRolesList();
+}
+function removeRole(i){
+  const roles=getJobRoles(S.companyId);roles.splice(i,1);saveJobRoles(S.companyId,roles);renderRolesList();
+}
+
+// ========================================
 //  REPORTS
-// ============================================================
-let reportTab='daily';
-function switchReportTab(tab){
-  reportTab=tab;
-  document.querySelectorAll('#tab-reports .tab').forEach((t,i)=>{
-    t.classList.toggle('active',['daily','staff','summary'][i]===tab);
-  });
-  ['report-daily','report-staff','report-summary'].forEach(id=>{
-    document.getElementById(id).style.display='none';
-  });
-  document.getElementById('report-'+tab).style.display='block';
-  renderReport(tab);
+// ========================================
+function populateRptDeptFilter(){
+  const sel=document.getElementById('rpt-dept');if(!sel)return;
+  const depts=getDepts(S.companyId);
+  sel.innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
 }
 
-function renderReport(tab){
-  const logs=getLogs(state.companyId);
-  const staff=getStaff(state.companyId);
+function switchReportTab(tab){
+  S.reportTab=tab;
+  document.querySelectorAll('#tab-reports .tab').forEach((t,i)=>{t.classList.toggle('active',['daily','staff','summary','detailed'][i]===tab);});
+  document.getElementById('print-btn').style.display=tab==='detailed'?'flex':'none';
+  renderReportContent();
+}
+
+function renderReportContent(){
+  const tab=S.reportTab;
+  const fromDate=document.getElementById('rpt-from').value;
+  const toDate=document.getElementById('rpt-to').value;
+  const deptFilter=document.getElementById('rpt-dept').value;
+  let logs=getLogs(S.companyId).filter(l=>{
+    if(fromDate&&l.date<fromDate)return false;
+    if(toDate&&l.date>toDate)return false;
+    if(deptFilter&&l.staffDept!==deptFilter)return false;
+    return true;
+  });
+  const staff=getStaff(S.companyId);
+  const c=document.getElementById('report-content');
 
   if(tab==='daily'){
-    const sorted=[...logs].sort((a,b)=>new Date(b.signInTime)-new Date(a.signInTime));
-    if(!sorted.length){document.getElementById('report-daily').innerHTML='<p style="color:var(--text3);font-size:14px;">No logs yet.</p>';return;}
-    document.getElementById('report-daily').innerHTML=sorted.map(l=>{
-      const total=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
-      const st=staff.find(s=>s.id===l.staffId);
+    logs=[...logs].sort((a,b)=>new Date(b.signInTime||0)-new Date(a.signInTime||0));
+    c.innerHTML=logs.length?logs.map(l=>{
+      const val=calcLogVal(l);const mins=calcLogMins(l);
       return `<div class="report-row" onclick="showLogDetail('${l.id}')">
         <div class="report-avatar">${initials(l.staffName||'?')}</div>
-        <div class="report-info">
-          <div class="report-name">${esc(l.staffName||l.staffId)}</div>
-          <div class="report-meta">${l.date} · ${l.signInTime?l.signInTime.split('T')[1].substring(0,5):'?'} → ${l.signOutTime?l.signOutTime.split('T')[1].substring(0,5):'Still in'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;">${esc(l.staffName||l.staffId)}</div>
+          <div style="font-size:11px;color:var(--text3);">${l.date} · ${l.signInTime?fmtTime(l.signInTime):'?'} → ${l.signOutTime?fmtTime(l.signOutTime):'Active'}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
-          <div class="report-value">₦${total.toLocaleString('en-NG')}</div>
-          <span class="badge ${l.signOutTime?'badge-success':'badge-warn'}" style="font-size:11px;">${l.signOutTime?'Complete':'Active'}</span>
+          <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</div>
+          <div style="font-size:11px;color:var(--text3);">${minsToHours(mins)}</div>
         </div>
-      </div>`;
-    }).join('');
+      </div>`;}).join(''):'<p style="color:var(--text3);">No logs in this period.</p>';
   }
-
   if(tab==='staff'){
     const byStaff={};
     logs.forEach(l=>{
-      if(!byStaff[l.staffId])byStaff[l.staffId]={name:l.staffName||l.staffId,days:0,value:0,tasks:0};
-      byStaff[l.staffId].days++;
-      byStaff[l.staffId].value+=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
-      byStaff[l.staffId].tasks+=(l.tasks||[]).length;
+      if(!byStaff[l.staffId])byStaff[l.staffId]={name:l.staffName||l.staffId,dept:l.staffDept||'',days:0,val:0,mins:0};
+      byStaff[l.staffId].days++;byStaff[l.staffId].val+=calcLogVal(l);byStaff[l.staffId].mins+=calcLogMins(l);
     });
-    const rows=Object.entries(byStaff).sort((a,b)=>b[1].value-a[1].value);
-    if(!rows.length){document.getElementById('report-staff').innerHTML='<p style="color:var(--text3);font-size:14px;">No data yet.</p>';return;}
-    document.getElementById('report-staff').innerHTML=rows.map(([id,d])=>`
+    const rows=Object.entries(byStaff).sort((a,b)=>b[1].val-a[1].val);
+    c.innerHTML=rows.length?rows.map(([id,d])=>`
       <div class="report-row">
         <div class="report-avatar">${initials(d.name)}</div>
-        <div class="report-info">
-          <div class="report-name">${esc(d.name)}</div>
-          <div class="report-meta">${d.days} day(s) · ${d.tasks} task(s)</div>
+        <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${esc(d.name)}</div>
+        <div style="font-size:11px;color:var(--text3);">${esc(d.dept)} · ${d.days} day(s)</div></div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${fmtNum(d.val)}</div>
+          <div style="font-size:11px;color:var(--text3);">${minsToHours(d.mins)}</div>
         </div>
-        <div class="report-value">₦${d.value.toLocaleString('en-NG')}</div>
-      </div>`).join('');
+      </div>`).join(''):'<p style="color:var(--text3);">No data.</p>';
   }
-
   if(tab==='summary'){
-    const totalStaff=staff.length;
-    const today=todayStr();
-    const todayLogs=logs.filter(l=>l.date===today);
-    const totalValue=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
-    const todayValue=todayLogs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
-    document.getElementById('report-summary').innerHTML=`
-      <div class="status-grid">
-        <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-val">${totalStaff}</div></div>
-        <div class="stat-card"><div class="stat-label">Logs Today</div><div class="stat-val accent">${todayLogs.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Today's Value</div><div class="stat-val">₦${todayValue.toLocaleString('en-NG')}</div></div>
-        <div class="stat-card"><div class="stat-label">All-Time Value</div><div class="stat-val">₦${totalValue.toLocaleString('en-NG')}</div></div>
-      </div>
-      <div class="card" style="margin-top:1rem;">
-        <div class="card-header"><span class="card-title">Today's Active Staff</span></div>
-        ${todayLogs.length?todayLogs.map(l=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);">
-            <div>
-              <div style="font-size:14px;font-weight:500;">${esc(l.staffName||l.staffId)}</div>
-              <div style="font-size:12px;color:var(--text3);">In: ${l.signInTime?l.signInTime.split('T')[1].substring(0,5):'?'}</div>
-            </div>
-            <span class="badge ${l.signOutTime?'badge-success':'badge-warn'}">${l.signOutTime?'Out':'In'}</span>
-          </div>`).join(''):
-          '<p style="color:var(--text3);font-size:13px;">No staff checked in today.</p>'}
+    const totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
+    const totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+    const totalTasks=logs.reduce((a,l)=>a+(l.tasks||[]).length,0);
+    c.innerHTML=`
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Logs</div><div class="stat-val">${logs.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Tasks</div><div class="stat-val">${totalTasks}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val accent">${minsToHours(totalMins)}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
       </div>`;
+  }
+  if(tab==='detailed'){
+    // Group by department then staff
+    const grouped={};
+    logs.forEach(l=>{
+      const dept=l.staffDept||'Unassigned';
+      if(!grouped[dept])grouped[dept]={};
+      if(!grouped[dept][l.staffId])grouped[dept][l.staffId]={name:l.staffName||l.staffId,logs:[]};
+      grouped[dept][l.staffId].logs.push(l);
+    });
+    let html=`<div id="print-area">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:1rem;">Period: ${fromDate||'All'} to ${toDate||'Today'}</div>`;
+    Object.entries(grouped).forEach(([dept,staffMap])=>{
+      html+=`<div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;"><span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent);">${esc(dept)}</span></div>`;
+      Object.entries(staffMap).forEach(([sid,sd])=>{
+        const totalVal=sd.logs.reduce((a,l)=>a+calcLogVal(l),0);
+        const totalMins=sd.logs.reduce((a,l)=>a+calcLogMins(l),0);
+        html+=`<div style="margin-left:.75rem;margin-bottom:1rem;">
+          <div style="font-weight:600;font-size:13px;margin-bottom:.4rem;">${esc(sd.name)} <span style="color:var(--text3);font-weight:400;">— ₦${fmtNum(totalVal)} · ${minsToHours(totalMins)}</span></div>`;
+        sd.logs.forEach(l=>{
+          html+=`<div style="margin-left:.75rem;margin-bottom:.5rem;">
+            <div style="font-size:12px;color:var(--text3);">${l.date} · In: ${l.signInTime?fmtTime(l.signInTime):'?'} Out: ${l.signOutTime?fmtTime(l.signOutTime):'—'}</div>
+            ${(l.tasks||[]).map((t,i)=>`
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:.5rem;align-items:start;padding:.35rem .5rem;background:var(--bg3);border-radius:6px;margin-top:.25rem;font-size:12px;">
+                <span>${i+1}. ${esc(t.description||'')}</span>
+                <span style="color:var(--text3);white-space:nowrap;">${minsToHours(parseInt(t.duration)||0)}</span>
+                <span style="font-family:var(--font-mono);color:var(--success);white-space:nowrap;">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+              </div>`).join('')}
+          </div>`;
+        });
+        html+=`</div>`;
+      });
+    });
+    html+=`</div>`;
+    c.innerHTML=html||'<p style="color:var(--text3);">No data in this period.</p>';
   }
 }
 
 function showLogDetail(logId){
-  const logs=getLogs(state.companyId);
-  const l=logs.find(x=>x.id===logId);
-  if(!l)return;
-  const total=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+  const l=getLogs(S.companyId).find(x=>x.id===logId);if(!l)return;
+  const val=calcLogVal(l);const mins=calcLogMins(l);
   document.getElementById('report-detail-content').innerHTML=`
-    <div style="font-family:var(--font-mono);font-size:15px;font-weight:700;margin-bottom:1rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
-    <div class="status-grid">
-      <div class="stat-card">
-        <div class="stat-label">Sign In</div>
-        <div class="stat-val">${l.signInTime?l.signInTime.split('T')[1].substring(0,8):'—'}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Sign Out</div>
-        <div class="stat-val">${l.signOutTime?l.signOutTime.split('T')[1].substring(0,8):'Active'}</div>
-      </div>
+    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;margin-bottom:.9rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">In</div><div class="stat-val">${l.signInTime?fmtTime(l.signInTime):'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Out</div><div class="stat-val">${l.signOutTime?fmtTime(l.signOutTime):'Active'}</div></div>
+      <div class="stat-card"><div class="stat-label">Hours</div><div class="stat-val accent">${minsToHours(mins)}</div></div>
+      <div class="stat-card"><div class="stat-label">Value</div><div class="stat-val accent">₦${fmtNum(val)}</div></div>
     </div>
-    ${l.signInLocation?`
-    <div style="margin:.75rem 0;padding:.75rem;background:var(--bg3);border-radius:8px;font-size:12px;">
-      <div style="color:var(--text3);margin-bottom:.25rem;">Sign-in Location</div>
-      <div>📍 ${esc(l.signInLocation.address||'')} <span style="color:var(--text3);">(±${l.signInLocation.accuracy}m)</span></div>
-    </div>`:''}
-    ${l.signOutLocation?`
-    <div style="margin:.75rem 0;padding:.75rem;background:var(--bg3);border-radius:8px;font-size:12px;">
-      <div style="color:var(--text3);margin-bottom:.25rem;">Sign-out Location</div>
-      <div>📍 ${esc(l.signOutLocation.address||'')} <span style="color:var(--text3);">(±${l.signOutLocation.accuracy}m)</span></div>
-    </div>`:''}
-    <div style="margin-top:1rem;">
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;">Tasks Completed</div>
-      ${(l.tasks||[]).map((t,i)=>`
-        <div style="padding:.75rem;background:var(--bg3);border-radius:8px;margin-bottom:.5rem;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;">
-            <span style="font-size:12px;color:var(--accent);font-family:var(--font-mono);">Task ${i+1}</span>
-            <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${(parseFloat(t.value)||0).toLocaleString('en-NG')}</span>
+    ${l.signInLocation?`<div style="padding:.65rem .85rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.4rem;">📍 <b>In:</b> ${esc(l.signInLocation.address||'')} (±${l.signInLocation.accuracy}m)</div>`:''}
+    ${l.signOutLocation?`<div style="padding:.65rem .85rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.75rem;">📍 <b>Out:</b> ${esc(l.signOutLocation.address||'')} (±${l.signOutLocation.accuracy}m)</div>`:''}
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;">Tasks</div>
+    ${(l.tasks||[]).map((t,i)=>`
+      <div style="background:var(--bg3);border-radius:8px;padding:.7rem .85rem;margin-bottom:.4rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+          <span class="task-num">Task ${i+1}</span>
+          <div style="display:flex;gap:.5rem;">
+            <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
+            <span style="font-family:var(--font-mono);font-size:12px;color:var(--success);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
           </div>
-          <p style="font-size:13px;">${esc(t.description||'')}</p>
-        </div>`).join('')}
-      ${(l.tasks||[]).length?`
-        <div style="display:flex;justify-content:space-between;padding:.65rem .9rem;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-weight:600;">
-          <span>Total Value</span>
-          <span style="font-family:var(--font-mono);color:var(--success);">₦${total.toLocaleString('en-NG')}</span>
-        </div>`:'<p style="font-size:13px;color:var(--text3);">No tasks recorded.</p>'}
-    </div>`;
+        </div>
+        <p style="font-size:13px;">${esc(t.description||'')}</p>
+      </div>`).join('')}
+    ${(l.tasks||[]).length?`<div class="total-row"><span style="font-size:13px;">Total Value</span><span style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</span></div>`:''}`;
   showModal('modal-report-detail');
 }
 
-// ============================================================
-//  PROFILE
-// ============================================================
-function renderProfile(){
-  const u=state.user;
-  const co=getCompany(state.companyId);
-  const logs=getLogs(state.companyId).filter(l=>l.staffId===u.id);
-  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
-
-  document.getElementById('profile-content').innerHTML=`
-    <div class="card" style="margin-bottom:1rem;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
-        <div style="width:56px;height:56px;border-radius:14px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:22px;color:var(--accent);">${initials(u.name)}</div>
-        <div>
-          <div style="font-size:17px;font-weight:600;">${esc(u.name)}</div>
-          <div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.role||'')}</div>
-          <span class="badge ${u.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:4px;">${u.systemRole==='manager'?'Manager':'Staff'}</span>
-        </div>
-      </div>
-      ${u.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📧 ${esc(u.email)}</div>`:''}
-      ${u.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📱 ${esc(u.phone)}</div>`:''}
-      ${u.department?`<div style="font-size:13px;color:var(--text2);">🏢 ${esc(u.department)}</div>`:''}
-    </div>
-    <div class="status-grid">
-      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${totalVal.toLocaleString('en-NG')}</div></div>
-    </div>
-    ${co?`
-    <div class="card" style="margin-top:1rem;">
-      <div class="card-title" style="margin-bottom:.75rem;">Company</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">${esc(co.name)}</div>
-      ${co.industry?`<div style="font-size:13px;color:var(--text3);">${esc(co.industry)}</div>`:''}
-      ${co.address?`<div style="font-size:13px;color:var(--text3);">${esc(co.address)}</div>`:''}
-    </div>`:''}
-    <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:1.25rem;" onclick="doLogout()">
-      Sign Out of Account
-    </button>`;
+function printReport(){
+  const content=document.getElementById('print-area');if(!content)return;
+  const co=getCompany(S.companyId);
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>CittaWorksX Report — ${co?co.name:''}</title>
+    <style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:20px;}
+    h1{font-size:18px;margin-bottom:4px;}h2{font-size:14px;color:#444;margin-bottom:16px;}
+    .dept-header{background:#f0f0f0;padding:6px 10px;font-weight:700;margin:12px 0 6px;border-radius:4px;}
+    .staff-name{font-weight:600;margin:8px 0 4px 10px;}
+    .log-date{font-size:11px;color:#666;margin-left:20px;}
+    .task-row{display:grid;grid-template-columns:1fr 80px 100px;gap:8px;padding:3px 6px;background:#f9f9f9;border-radius:3px;margin:2px 20px;}
+    .total{text-align:right;font-weight:700;border-top:1px solid #ccc;padding-top:8px;margin-top:8px;}
+    @media print{button{display:none;}}</style></head><body>
+    <h1>CittaWorksX — Activity Report</h1>
+    <h2>${co?co.name:''}</h2>
+    <button onclick="window.print()" style="padding:6px 16px;background:#00d4aa;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:16px;">🖨 Print / Save PDF</button>
+    ${content.innerHTML}</body></html>`);
+  w.document.close();
 }
 
-// ============================================================
-//  USER MENU
-// ============================================================
-function showUserMenu(){
-  const u=state.user;
-  document.getElementById('user-menu-content').innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
-      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);">${initials(u.name)}</div>
-      <div>
-        <div style="font-weight:600;">${esc(u.name)}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(u.id)}</div>
+// ========================================
+//  PROFILE
+// ========================================
+function renderProfile(){
+  const u=S.user;
+  const co=getCompany(S.companyId);
+  const logs=getLogs(S.companyId).filter(l=>l.staffId===u.id);
+  const totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
+  const totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+  document.getElementById('profile-content').innerHTML=`
+    <div class="card" style="margin-bottom:.9rem;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:.9rem;">
+        <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(u.name)}</div>
+        <div>
+          <div style="font-size:16px;font-weight:600;">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.role||'')} · ${esc(u.department||'')}</div>
+          <span class="badge ${u.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:3px;">${u.systemRole==='manager'?'Manager':'Staff'}</span>
+        </div>
       </div>
+      ${u.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(u.email)}</div>`:''}
+      ${u.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(u.phone)}</div>`:''}
     </div>
-    <button class="btn" style="width:100%;justify-content:center;margin-bottom:.5rem;" onclick="closeModal('modal-user-menu');switchTab('profile')">View Profile</button>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
+    </div>
+    <div style="margin-top:.75rem;">
+      <button class="btn" style="width:100%;justify-content:center;margin-bottom:.6rem;" onclick="showEditProfile()">Edit My Profile</button>
+      ${u.systemRole==='manager'?`<button class="btn" style="width:100%;justify-content:center;margin-bottom:.6rem;" onclick="showCoProfileModal()">Edit Company Profile</button>`:''}
+      <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>
+    </div>`;
+}
+
+function showEditProfile(){
+  const u=S.user;
+  // Staff can edit everything except ID and name (name only by manager)
+  document.getElementById('staff-modal-title').textContent='Edit My Profile';
+  S.editingStaffId=u.id;
+  hideAlert('staff-form-alert');
+  const depts=getDepts(S.companyId);const roles=getJobRoles(S.companyId);
+  const ds=document.getElementById('s-dept');ds.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  const rs=document.getElementById('s-role');rs.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+  document.getElementById('s-name').value=u.name;
+  document.getElementById('s-name').disabled=true; // Staff cannot edit own name
+  document.getElementById('s-id').value=u.id;
+  document.getElementById('s-id').disabled=true;
+  document.getElementById('s-email').value=u.email||'';
+  document.getElementById('s-phone').value=u.phone||'';
+  document.getElementById('s-dept').value=u.department||'';
+  document.getElementById('s-role').value=u.role||'';
+  document.getElementById('s-pw').value='';
+  document.getElementById('s-sys-role').value=u.systemRole||'staff';
+  document.getElementById('s-sys-role').disabled=true;
+  showModal('modal-register-staff');
+}
+
+function showCoProfileModal(){
+  const co=getCompany(S.companyId);
+  document.getElementById('cp-name').value=co.name||'';
+  document.getElementById('cp-address').value=co.address||'';
+  document.getElementById('cp-contact').value=co.contactPerson||'';
+  document.getElementById('cp-email').value=co.email||'';
+  document.getElementById('cp-phone').value=co.phone||'';
+  document.getElementById('cp-industry').value=co.industry||'';
+  document.getElementById('cp-country').value=co.country||'';
+  hideAlert('co-profile-alert');
+  showModal('modal-co-profile');
+}
+function saveCoProfile(){
+  const name=v('cp-name');if(!name){showAlert('co-profile-alert','Company name required.','danger');return;}
+  const cos=getCompanies();
+  const idx=cos.findIndex(c=>c.id===S.companyId);
+  if(idx>-1){Object.assign(cos[idx],{name,address:v('cp-address'),contactPerson:v('cp-contact'),email:v('cp-email'),phone:v('cp-phone'),industry:v('cp-industry'),country:v('cp-country')});}
+  saveCompanies(cos);closeModal('modal-co-profile');renderProfile();
+}
+
+// ========================================
+//  USER GUIDE
+// ========================================
+function renderGuide(){
+  document.getElementById('guide-content').innerHTML=`
+    <div class="guide-section">
+      <h3>🏢 Getting Started</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Your company must be registered in the <strong>Admin Portal</strong> (admin.html) before you can log in.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">On the home screen, <strong>select your company</strong>, then enter your <strong>Staff ID</strong> and <strong>Password</strong> to sign in.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>⏰ Daily Sign-In</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Open the app and tap the <strong>Sign In</strong> button on the Dashboard tab. The app will capture your precise location automatically.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Allow location access when prompted — this is required for accurate attendance tracking.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Your sign-in time and location are recorded instantly.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>✅ Adding Tasks</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Go to the <strong>Tasks</strong> tab and tap <strong>+ Add Task</strong>.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Each task requires: <strong>Description</strong> (what you did), <strong>Duration</strong> (minutes spent), and <strong>Value Added</strong> (₦ amount).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tasks are <strong>saved automatically</strong> as you type — you can close the app and return later to continue editing.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body">The total hours and total value are shown at the bottom of the tasks list.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>📋 Review & Sign Out</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">When done for the day, tap <strong>Review & Submit Tasks</strong> at the bottom of the Tasks tab.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">A <strong>review screen</strong> shows all your tasks, durations, and values. Check everything carefully.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tap <strong>Submit & Sign Out</strong>. Your sign-out location is captured and the day is complete.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Important:</strong> You cannot sign out without completing and submitting at least one task.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>👔 Manager Features</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Reports tab:</strong> View daily logs, staff summaries, and detailed activity reports filterable by date and department. Print to PDF.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Staff tab:</strong> Register new staff, assign roles, manage departments and job roles (via Dept/Roles button).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Company Profile:</strong> Edit company details via the Profile tab → Edit Company Profile.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>📱 Installing as App</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Android:</strong> Open in Chrome → tap ⋮ menu → <em>Add to Home screen</em>.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>iPhone:</strong> Open in Safari → tap the Share icon → <em>Add to Home Screen</em>.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">The app works <strong>offline</strong> — all data is saved on your device and syncs automatically when connected.</div></div>
+    </div>
+    <div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:10px;padding:1rem;font-size:13px;color:var(--text2);line-height:1.7;">
+      <strong style="color:var(--accent);">Need help?</strong> Contact your manager or the system administrator at your company.
+    </div>`;
+}
+
+// ========================================
+//  USER MENU
+// ========================================
+function showUserMenu(){
+  const u=S.user;
+  document.getElementById('user-menu-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.1rem;">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);">${initials(u.name)}</div>
+      <div><div style="font-weight:600;">${esc(u.name)}</div><div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.systemRole)}</div></div>
+    </div>
+    <button class="btn" style="width:100%;justify-content:center;margin-bottom:.5rem;" onclick="closeModal('modal-user-menu');switchTab('profile')">My Profile</button>
     <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>`;
   showModal('modal-user-menu');
 }
-
 function doLogout(){
-  state.user=null;state.companyId=null;state.signedIn=false;
-  state.todayLog=null;state.tasks=[];state.currentLocation=null;
+  Object.assign(S,{companyId:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null});
   closeModal('modal-user-menu');
-  showScreen('company-screen');
-  renderCompanyScreen();
+  document.getElementById('s-name').disabled=false;
+  document.getElementById('s-sys-role').disabled=false;
+  showScreen('company-screen');renderCompanyScreen();
 }
 
-// ============================================================
+// ========================================
 //  TAB NAVIGATION
-// ============================================================
+// ========================================
 function switchTab(tab){
-  state.tab=tab;
-  document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.tab-content,[id^=tab-]').forEach(el=>{
+    if(el.id&&el.id.startsWith('tab-'))el.style.display='none';
+  });
   document.getElementById('tab-'+tab).style.display='block';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  const navEl=document.getElementById('nav-'+tab);
-  if(navEl)navEl.classList.add('active');
-
+  const ni=document.getElementById('nav-'+tab);if(ni)ni.classList.add('active');
+  S.reportTab=S.reportTab||'daily';
   if(tab==='staff')renderStaffList();
-  if(tab==='reports'){switchReportTab('daily');}
+  if(tab==='reports'){renderReportContent();document.getElementById('print-btn').style.display='none';}
   if(tab==='profile')renderProfile();
+  if(tab==='guide')renderGuide();
   if(tab==='tasks')renderTasks();
 }
 
-// ============================================================
+// ========================================
 //  UTILITIES
-// ============================================================
+// ========================================
 function showModal(id){document.getElementById(id).classList.remove('hidden');}
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
-
-function showAlert(id,msg,type){
-  const el=document.getElementById(id);
-  if(!el)return;
-  el.className='alert alert-'+type;
-  el.textContent=msg;
-}
-function hideAlert(id){
-  const el=document.getElementById(id);
-  if(el)el.classList.add('hidden');
-}
-
-function val(id){return (document.getElementById(id)||{}).value||'';}
-function clearForm(ids){ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function initials(name){return name.split(' ').slice(0,2).map(n=>n.charAt(0).toUpperCase()).join('');}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='alert alert-'+type;el.textContent=msg;}
+function hideAlert(id){const el=document.getElementById(id);if(el){el.classList.add('hidden');}}
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function initials(n){return String(n||'?').split(' ').slice(0,2).map(w=>w.charAt(0).toUpperCase()).join('');}
 function todayStr(){return new Date().toISOString().split('T')[0];}
+function fmtTime(iso){if(!iso)return'—';return new Date(iso).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});}
+function fmtNum(n){return(+n||0).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:2});}
+function minsToHours(m){const h=Math.floor((m||0)/60);const min=(m||0)%60;return `${h}h ${min}m`;}
+function calcLogVal(l){return(l.tasks||[]).reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);}
+function calcLogMins(l){return(l.tasks||[]).reduce((a,t)=>a+(parseInt(t.duration)||0),0);}
 
 // Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.add('hidden');});
-});
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');});});
 
-// ============================================================
-//  DEMO DATA (runs once)
-// ============================================================
-(function seedDemoIfEmpty(){
-  if(getCompanies().length)return;
-  const id='co_demo';
-  saveCompanies([{
-    id,name:'Demo Company Ltd',industry:'Technology',country:'Nigeria',
-    address:'1 Victoria Island, Lagos',color:'rgba(0,212,170,.15)',textColor:'#00d4aa',
-    createdAt:new Date().toISOString()
-  }]);
-  saveStaff(id,[
-    {id:'MGR001',name:'Amara Okafor',email:'amara@demo.com',role:'General Manager',
-     department:'Management',phone:'+2348012345678',password:'manager123',
-     systemRole:'manager',companyId:id,createdAt:new Date().toISOString()},
-    {id:'STF001',name:'Chidi Eze',email:'chidi@demo.com',role:'Sales Executive',
-     department:'Sales',phone:'+2348087654321',password:'staff123',
-     systemRole:'staff',companyId:id,createdAt:new Date().toISOString()}
-  ]);
-})();
+// PWA
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
 </body>
 </html>
