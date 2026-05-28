@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="theme-color" content="#0a0f1e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CittaWorksX"/>
+<meta name="description" content="Staff Time Management & Productivity Tracker"/>
+<title>CittaWorksX</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0f1e;--bg2:#111827;--bg3:#1a2235;--bg4:#243049;
+  --accent:#00d4aa;--accent2:#0099ff;--accent3:#f59e0b;
+  --text:#e8edf5;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e2d4a;--border2:#2a3d5c;
+  --danger:#ef4444;--success:#22c55e;--warn:#f59e0b;
+  --card-radius:14px;--btn-radius:8px;
+  --font-mono:'Space Mono',monospace;--font-sans:'DM Sans',sans-serif;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+[data-theme="light"]{
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8eef5;--bg4:#dde6f0;
+  --text:#0f172a;--text2:#334155;--text3:#64748b;
+  --border:#cbd5e1;--border2:#94a3b8;
+  --shadow:0 4px 24px rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:var(--font-sans);background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;}
+input,select,textarea,button{font-family:inherit;}
+a{color:var(--accent);text-decoration:none;}
+
+/* ========== LAYOUT ========== */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+
+/* ========== TOPBAR ========== */
+.topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 1.25rem;height:60px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+  flex-shrink:0;
+}
+.topbar-logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  width:36px;height:36px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:16px;color:#0a0f1e;
+}
+.logo-text{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:-.5px;}
+.logo-text span{color:var(--accent);}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+
+/* ========== BUTTONS ========== */
+.btn{
+  border:1.5px solid var(--border2);background:transparent;color:var(--text);
+  padding:.55rem 1.1rem;border-radius:var(--btn-radius);cursor:pointer;
+  font-size:14px;font-weight:500;transition:all .18s;display:inline-flex;
+  align-items:center;gap:6px;white-space:nowrap;
+}
+.btn:hover{background:var(--bg3);border-color:var(--accent);}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#0a0f1e;font-weight:600;}
+.btn-primary:hover{background:#00b894;border-color:#00b894;color:#0a0f1e;}
+.btn-danger{background:var(--danger);border-color:var(--danger);color:#fff;}
+.btn-danger:hover{background:#dc2626;border-color:#dc2626;}
+.btn-sm{padding:.35rem .75rem;font-size:13px;}
+.btn-icon{width:36px;height:36px;padding:0;justify-content:center;}
+
+/* ========== CARDS ========== */
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--card-radius);padding:1.25rem;
+}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.card-title{font-family:var(--font-mono);font-size:13px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--text2);}
+
+/* ========== FORMS ========== */
+.form-group{margin-bottom:1rem;}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:.4rem;}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;background:var(--bg3);border:1.5px solid var(--border);
+  color:var(--text);padding:.65rem .9rem;border-radius:var(--btn-radius);
+  font-size:14px;transition:border .18s;outline:none;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,170,.12);
+}
+.form-group select option{background:var(--bg2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.form-error{font-size:12px;color:var(--danger);margin-top:.3rem;}
+
+/* ========== BADGES ========== */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:.2rem .6rem;border-radius:20px;font-size:12px;font-weight:600;
+}
+.badge-success{background:rgba(34,197,94,.15);color:#22c55e;}
+.badge-danger{background:rgba(239,68,68,.15);color:#ef4444;}
+.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b;}
+.badge-info{background:rgba(0,153,255,.15);color:#0099ff;}
+.badge-accent{background:rgba(0,212,170,.15);color:#00d4aa;}
+
+/* ========== CONTAINERS ========== */
+.container{max-width:900px;margin:0 auto;padding:1.5rem 1.25rem;width:100%;}
+.page-title{font-family:var(--font-mono);font-size:22px;font-weight:700;margin-bottom:1.5rem;}
+.page-title span{color:var(--accent);}
+
+/* ========== THEME TOGGLE ========== */
+.theme-toggle{
+  width:52px;height:28px;background:var(--bg3);border:1.5px solid var(--border2);
+  border-radius:14px;position:relative;cursor:pointer;transition:all .2s;
+}
+.theme-toggle::after{
+  content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;
+  background:var(--accent);border-radius:50%;transition:all .25s;
+}
+[data-theme="light"] .theme-toggle::after{left:27px;}
+.theme-label{font-size:12px;color:var(--text3);}
+
+/* ========== NAV ========== */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
+  border-top:1px solid var(--border);display:flex;z-index:100;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:.6rem .4rem;cursor:pointer;color:var(--text3);transition:color .18s;
+  font-size:11px;gap:3px;
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.nav-item.active{color:var(--accent);}
+
+/* ========== LOGIN ========== */
+#login-screen{
+  background:var(--bg);align-items:center;justify-content:center;
+  min-height:100vh;padding:1.5rem;
+}
+.login-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:20px;
+  padding:2.5rem;width:100%;max-width:420px;
+}
+.login-logo{text-align:center;margin-bottom:2rem;}
+.login-logo .mark{
+  width:64px;height:64px;background:var(--accent);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:28px;color:#0a0f1e;
+  margin:0 auto 12px;
+}
+.login-logo h1{font-family:var(--font-mono);font-size:24px;font-weight:700;}
+.login-logo h1 span{color:var(--accent);}
+.login-logo p{color:var(--text3);font-size:13px;margin-top:4px;}
+.company-select-box{
+  background:var(--bg3);border:1.5px solid var(--accent);border-radius:12px;
+  padding:.9rem 1rem;margin-bottom:1.5rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.company-select-box .co-name{font-weight:600;font-size:14px;}
+.company-select-box .co-label{font-size:12px;color:var(--text3);}
+
+/* ========== SIGNIN SCREEN ========== */
+.signin-hero{
+  background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--card-radius);
+  padding:1.5rem;margin-bottom:1.5rem;
+}
+.time-display{
+  font-family:var(--font-mono);font-size:42px;font-weight:700;
+  color:var(--accent);letter-spacing:-2px;margin-bottom:.25rem;
+}
+.date-display{font-size:14px;color:var(--text2);}
+.location-indicator{
+  display:flex;align-items:center;gap:8px;margin-top:1rem;
+  padding:.65rem .9rem;background:var(--bg);border-radius:8px;
+  border:1px solid var(--border);
+}
+.loc-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;
+}
+.loc-dot.locating{background:var(--warn);animation:pulse 1s infinite;}
+.loc-dot.located{background:var(--success);}
+.loc-dot.failed{background:var(--danger);}
+.loc-text{font-size:12px;color:var(--text2);word-break:break-word;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ========== CHECKLIST ========== */
+.task-item{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:1rem;margin-bottom:.75rem;position:relative;
+}
+.task-item .task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;}
+.task-num{
+  font-family:var(--font-mono);font-size:11px;color:var(--accent);
+  background:rgba(0,212,170,.1);padding:.15rem .5rem;border-radius:4px;font-weight:700;
+}
+.value-field{
+  display:flex;align-items:center;gap:6px;margin-top:.5rem;
+}
+.value-field .prefix{
+  font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent);flex-shrink:0;
+}
+.value-field input{flex:1;}
+.add-task-btn{
+  border:2px dashed var(--border2);background:transparent;color:var(--text3);
+  width:100%;padding:.9rem;border-radius:10px;cursor:pointer;font-size:14px;
+  transition:all .18s;margin-top:.25rem;
+}
+.add-task-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ========== STATUS CARDS ========== */
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem;}
+.stat-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:.9rem;
+}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.3rem;}
+.stat-val{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text);}
+.stat-val.accent{color:var(--accent);}
+
+/* ========== TABLE ========== */
+.table-wrap{overflow-x:auto;margin-top:.5rem;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{
+  text-align:left;padding:.6rem .8rem;font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.8px;color:var(--text3);
+  border-bottom:1px solid var(--border);background:var(--bg3);
+}
+td{padding:.65rem .8rem;border-bottom:1px solid var(--border);color:var(--text);}
+tr:hover td{background:var(--bg3);}
+tr:last-child td{border-bottom:none;}
+
+/* ========== MODAL ========== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
+  display:flex;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.hidden{display:none;}
+.modal{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;width:100%;max-width:600px;
+  max-height:90vh;overflow-y:auto;padding:1.5rem 1.25rem;
+  padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-title{font-family:var(--font-mono);font-size:16px;font-weight:700;margin-bottom:1.25rem;}
+.modal-handle{
+  width:40px;height:4px;background:var(--border2);border-radius:2px;
+  margin:0 auto .9rem;
+}
+
+/* ========== SCROLLBARS ========== */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ========== ALERTS ========== */
+.alert{
+  padding:.75rem 1rem;border-radius:8px;font-size:13px;
+  display:flex;align-items:flex-start;gap:.6rem;margin-bottom:1rem;
+}
+.alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;}
+.alert-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+.alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#f59e0b;}
+.alert-info{background:rgba(0,153,255,.1);border:1px solid rgba(0,153,255,.3);color:#0099ff;}
+.alert.hidden{display:none;}
+
+/* ========== TABS ========== */
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:1.25rem;}
+.tab{
+  flex:1;padding:.5rem .75rem;border-radius:8px;border:none;
+  background:transparent;color:var(--text3);cursor:pointer;
+  font-size:13px;font-weight:500;transition:all .18s;
+}
+.tab.active{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
+
+/* ========== REPORTS ========== */
+.report-row{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:.9rem 1rem;margin-bottom:.6rem;
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:border-color .18s;
+}
+.report-row:hover{border-color:var(--accent);}
+.report-avatar{
+  width:40px;height:40px;border-radius:10px;background:var(--bg4);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--accent);
+  flex-shrink:0;
+}
+.report-info{flex:1;min-width:0;}
+.report-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.report-meta{font-size:12px;color:var(--text3);}
+.report-value{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--success);flex-shrink:0;}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:480px){
+  .form-row{grid-template-columns:1fr;}
+  .time-display{font-size:34px;}
+}
+.pb-nav{padding-bottom:calc(5rem + env(safe-area-inset-bottom));}
+
+/* ========== SECTION DIVIDER ========== */
+.section-divider{
+  display:flex;align-items:center;gap:.75rem;margin:1.5rem 0;
+  font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);
+}
+.section-divider::before,.section-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* ========== COMPANY CARDS ========== */
+.company-list{display:flex;flex-direction:column;gap:.6rem;}
+.company-card{
+  background:var(--bg3);border:1.5px solid var(--border);
+  border-radius:12px;padding:1rem;cursor:pointer;transition:all .18s;
+  display:flex;align-items:center;gap:12px;
+}
+.company-card:hover{border-color:var(--accent);}
+.company-card.selected{border-color:var(--accent);background:rgba(0,212,170,.06);}
+.co-icon{
+  width:46px;height:46px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;font-weight:700;
+  font-size:18px;font-family:var(--font-mono);flex-shrink:0;
+}
+.offline-banner{
+  background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);
+  padding:.5rem 1.25rem;font-size:12px;color:var(--warn);
+  display:flex;align-items:center;gap:.5rem;
+}
+.offline-banner.hidden{display:none;}
+
+/* ========== PROFILE AVATAR ========== */
+.user-avatar{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:13px;
+  background:var(--bg4);color:var(--accent);cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ========== OFFLINE BANNER ========== -->
+<div class="offline-banner hidden" id="offline-banner">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6s4-4 11-4 11 4 11 4"/><path d="M1 12s4-4 11-4 11 4 11 4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  You're offline — data saved locally
+</div>
+
+<!-- ========== COMPANY SELECT SCREEN ========== -->
+<div class="screen active" id="company-screen" style="align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--bg);">
+  <div style="width:100%;max-width:440px;">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="width:72px;height:72px;background:var(--accent);border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:32px;color:#0a0f1e;margin:0 auto 14px;">C</div>
+      <h1 style="font-family:var(--font-mono);font-size:26px;font-weight:700;">Citta<span style="color:var(--accent);">Works</span>X</h1>
+      <p style="color:var(--text3);font-size:13px;margin-top:6px;">Select your company to continue</p>
+    </div>
+    <div class="company-list" id="company-list"></div>
+    <div class="section-divider">or</div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="showAddCompany()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Register New Company
+    </button>
+    <div style="text-align:center;margin-top:1.25rem;">
+      <span class="theme-label">Theme</span>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="display:inline-block;vertical-align:middle;margin-left:8px;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div class="screen" id="login-screen">
+  <div style="align-items:center;justify-content:center;min-height:100vh;display:flex;padding:1.5rem;background:var(--bg);">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="mark" id="login-co-initial">C</div>
+        <h1 id="login-co-name">CittaWorks<span>X</span></h1>
+        <p id="login-co-sub">Staff Portal</p>
+      </div>
+      <div id="login-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>Staff ID</label>
+        <input type="text" id="login-id" placeholder="Enter your Staff ID" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="doLogin()">Sign In</button>
+      <div style="text-align:center;margin-top:1.25rem;">
+        <button class="btn btn-sm" onclick="goBack('login-screen','company-screen')">← Back to Companies</button>
+      </div>
+      <div style="text-align:center;margin-top:.75rem;">
+        <span class="theme-label">Theme</span>
+        <button class="theme-toggle" onclick="toggleTheme()" style="display:inline-block;vertical-align:middle;margin-left:8px;"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MAIN APP SCREEN ========== -->
+<div class="screen" id="main-screen">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-mark">C</div>
+      <span class="logo-text">Citta<span>Works</span>X</span>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"></button>
+      <div class="user-avatar" id="user-avatar-btn" onclick="showUserMenu()">??</div>
+    </div>
+  </div>
+
+  <!-- Content area with bottom padding for nav -->
+  <div style="flex:1;overflow-y:auto;" class="pb-nav">
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" class="tab-content container">
+      <div id="main-alert" class="alert hidden"></div>
+      <div class="signin-hero">
+        <div class="time-display" id="live-clock">--:--:--</div>
+        <div class="date-display" id="live-date">Loading…</div>
+        <div class="location-indicator" id="loc-indicator">
+          <div class="loc-dot locating" id="loc-dot"></div>
+          <span class="loc-text" id="loc-text">Acquiring location…</span>
+        </div>
+      </div>
+
+      <!-- Status cards -->
+      <div class="status-grid">
+        <div class="stat-card">
+          <div class="stat-label">Status</div>
+          <div class="stat-val accent" id="stat-status">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Sign In</div>
+          <div class="stat-val" id="stat-signin">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tasks Today</div>
+          <div class="stat-val" id="stat-tasks">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Value Added</div>
+          <div class="stat-val" id="stat-value">₦0</div>
+        </div>
+      </div>
+
+      <!-- Sign In / Sign Out button -->
+      <div id="signin-btn-area"></div>
+    </div>
+
+    <!-- TASKS TAB -->
+    <div id="tab-tasks" class="tab-content container" style="display:none;">
+      <div class="page-title">Daily <span>Tasks</span></div>
+      <div id="tasks-locked-msg" class="alert alert-warn hidden">
+        Sign in first to add tasks for today.
+      </div>
+      <div id="tasks-container"></div>
+      <button class="add-task-btn" id="add-task-btn" onclick="addTask()" style="display:none;">
+        + Add Task
+      </button>
+      <div id="tasks-footer" style="display:none;margin-top:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--bg3);border-radius:10px;border:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--text2);">Total Value Added</span>
+          <span style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--success);" id="total-value-display">₦0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS TAB (managers only) -->
+    <div id="tab-reports" class="tab-content container" style="display:none;">
+      <div class="page-title">Manager <span>Reports</span></div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchReportTab('daily')">Daily Logs</button>
+        <button class="tab" onclick="switchReportTab('staff')">By Staff</button>
+        <button class="tab" onclick="switchReportTab('summary')">Summary</button>
+      </div>
+      <div id="report-daily"></div>
+      <div id="report-staff" style="display:none;"></div>
+      <div id="report-summary" style="display:none;"></div>
+    </div>
+
+    <!-- STAFF TAB (managers only) -->
+    <div id="tab-staff" class="tab-content container" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+        <div class="page-title" style="margin:0;">Staff <span>Management</span></div>
+        <button class="btn btn-primary btn-sm" onclick="showRegisterStaff()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Register
+        </button>
+      </div>
+      <div id="staff-list-container"></div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div id="tab-profile" class="tab-content container" style="display:none;">
+      <div class="page-title">My <span>Profile</span></div>
+      <div id="profile-content"></div>
+    </div>
+
+  </div><!-- end content area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" id="nav-tasks" onclick="switchTab('tasks')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Tasks
+    </div>
+    <div class="nav-item hidden" id="nav-reports" onclick="switchTab('reports')">
+      <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      Reports
+    </div>
+    <div class="nav-item hidden" id="nav-staff" onclick="switchTab('staff')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Staff
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </div>
+  </nav>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Add Company Modal -->
+<div class="modal-overlay hidden" id="modal-add-company">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Register New Company</div>
+    <div id="co-form-alert" class="alert hidden"></div>
+    <div class="form-group">
+      <label>Company Name *</label>
+      <input type="text" id="co-name-input" placeholder="e.g. Acme Nigeria Ltd"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Industry</label>
+        <input type="text" id="co-industry" placeholder="e.g. Technology"/>
+      </div>
+      <div class="form-group">
+        <label>Country</label>
+        <input type="text" id="co-country" placeholder="e.g. Nigeria"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="co-address" placeholder="Company address"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="co-phone" placeholder="+234..."/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="co-email" placeholder="info@company.com"/>
+      </div>
+    </div>
+    <div class="section-divider">Admin Account</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Admin Name *</label>
+        <input type="text" id="co-admin-name" placeholder="Full name"/>
+      </div>
+      <div class="form-group">
+        <label>Staff ID *</label>
+        <input type="text" id="co-admin-id" placeholder="e.g. MGR001"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" id="co-admin-pw" placeholder="Min 6 characters"/>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password *</label>
+        <input type="password" id="co-admin-pw2" placeholder="Repeat password"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.5rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-add-company')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="registerCompany()">Create Company</button>
+    </div>
+  </div>
+</div>
+
+<!-- Register Staff Modal -->
+<div class="modal-overlay hidden" id="modal-register-staff">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Register New Staff</div>
+    <div id="staff-form-alert" class="alert hidden"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="s-name" placeholder="Full name"/>
+      </div>
+      <div class="form-group">
+        <label>Staff ID *</label>
+        <input type="text" id="s-id" placeholder="e.g. STF002"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="s-email" placeholder="staff@company.com"/>
+      </div>
+      <div class="form-group">
+        <label>Job Role *</label>
+        <input type="text" id="s-role" placeholder="e.g. Sales Executive"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="s-dept" placeholder="e.g. Marketing"/>
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="s-phone" placeholder="+234..."/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" id="s-pw" placeholder="Min 6 characters"/>
+      </div>
+      <div class="form-group">
+        <label>System Role *</label>
+        <select id="s-sys-role">
+          <option value="staff">Staff</option>
+          <option value="manager">Manager</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.5rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-register-staff')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="registerStaff()">Register Staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sign Out Confirmation Modal -->
+<div class="modal-overlay hidden" id="modal-signout">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Confirm Sign Out</div>
+    <div id="signout-alert" class="alert hidden"></div>
+    <div style="background:var(--bg3);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem;">Sign-out location will be captured:</div>
+      <div class="location-indicator" id="signout-loc-indicator" style="margin-top:0;">
+        <div class="loc-dot locating" id="signout-loc-dot"></div>
+        <span class="loc-text" id="signout-loc-text">Acquiring location…</span>
+      </div>
+    </div>
+    <div id="task-summary-preview" style="margin-bottom:1rem;"></div>
+    <div style="display:flex;gap:.75rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-signout')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" id="confirm-signout-btn" onclick="confirmSignOut()">
+        Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Detail Modal -->
+<div class="modal-overlay hidden" id="modal-staff-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="staff-detail-content"></div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-staff-detail')">Close</button>
+  </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div class="modal-overlay hidden" id="modal-report-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="report-detail-content"></div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-report-detail')">Close</button>
+  </div>
+</div>
+
+<!-- User Menu Modal -->
+<div class="modal-overlay hidden" id="modal-user-menu">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="user-menu-content"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA LAYER — localStorage with multi-company support
+// ============================================================
+const DB = {
+  get(key){try{return JSON.parse(localStorage.getItem(key));}catch{return null;}},
+  set(key,val){localStorage.setItem(key,JSON.stringify(val));},
+  del(key){localStorage.removeItem(key);}
+};
+
+function getCompanies(){return DB.get('cwx_companies')||[];}
+function saveCompanies(c){DB.set('cwx_companies',c);}
+function getCompany(id){return getCompanies().find(c=>c.id===id);}
+
+function getStaff(companyId){return DB.get('cwx_staff_'+companyId)||[];}
+function saveStaff(companyId,staff){DB.set('cwx_staff_'+companyId,staff);}
+
+function getLogs(companyId){return DB.get('cwx_logs_'+companyId)||[];}
+function saveLogs(companyId,logs){DB.set('cwx_logs_'+companyId,logs);}
+
+// ============================================================
+//  STATE
+// ============================================================
+let state = {
+  companyId: null,
+  user: null,
+  signedIn: false,
+  todayLog: null,
+  tasks: [],
+  currentLocation: null,
+  tab: 'dashboard'
+};
+
+// ============================================================
+//  THEME
+// ============================================================
+function toggleTheme(){
+  const t = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  DB.set('cwx_theme',t);
+}
+(function(){const t=DB.get('cwx_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+
+// ============================================================
+//  CLOCK
+// ============================================================
+function updateClock(){
+  const now=new Date();
+  const t=now.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=now.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const cl=document.getElementById('live-clock');
+  const dl=document.getElementById('live-date');
+  if(cl)cl.textContent=t;
+  if(dl)dl.textContent=d;
+}
+setInterval(updateClock,1000);
+
+// ============================================================
+//  LOCATION
+// ============================================================
+function getLocation(callback){
+  if(!navigator.geolocation){callback(null,'Geolocation not supported');return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const{latitude:lat,longitude:lng,accuracy}=pos.coords;
+      const acc=Math.round(accuracy);
+      reverseGeocode(lat,lng,addr=>{
+        callback({lat,lng,accuracy:acc,address:addr,timestamp:new Date().toISOString()});
+      });
+    },
+    err=>{callback(null,err.message);},
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+
+function reverseGeocode(lat,lng,cb){
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+    .then(r=>r.json())
+    .then(d=>{
+      const a=d.address||{};
+      const parts=[a.road,a.suburb||a.neighbourhood,a.city||a.town||a.village,a.state,a.country].filter(Boolean);
+      cb(parts.join(', ')||d.display_name||`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    })
+    .catch(()=>cb(`${lat.toFixed(5)}, ${lng.toFixed(5)}`));
+}
+
+function updateLocationUI(dotId,textId,status,msg){
+  const dot=document.getElementById(dotId);
+  const txt=document.getElementById(textId);
+  if(!dot||!txt)return;
+  dot.className='loc-dot '+status;
+  txt.textContent=msg;
+}
+
+function captureLocation(dotId,textId,callback){
+  updateLocationUI(dotId,textId,'locating','Acquiring precise location…');
+  getLocation((loc,err)=>{
+    if(loc){
+      const msg=`📍 ${loc.address} (±${loc.accuracy}m)`;
+      updateLocationUI(dotId,textId,'located',msg);
+      if(callback)callback(loc);
+    } else {
+      updateLocationUI(dotId,textId,'failed','Location unavailable: '+err);
+      if(callback)callback(null);
+    }
+  });
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('load',()=>{
+  updateClock();
+  renderCompanyScreen();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  window.addEventListener('online',()=>document.getElementById('offline-banner').classList.add('hidden'));
+  window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
+  if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
+  // Capture location early on dashboard
+  captureLocation('loc-dot','loc-text',loc=>{state.currentLocation=loc;});
+});
+
+// ============================================================
+//  SCREENS
+// ============================================================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goBack(from,to){
+  showScreen(to);
+  if(to==='company-screen')renderCompanyScreen();
+}
+
+// ============================================================
+//  COMPANY SCREEN
+// ============================================================
+function renderCompanyScreen(){
+  const list=document.getElementById('company-list');
+  const companies=getCompanies();
+  if(!companies.length){
+    list.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:14px;">No companies registered yet</div>`;
+    return;
+  }
+  list.innerHTML=companies.map(co=>`
+    <div class="company-card" onclick="selectCompany('${co.id}')">
+      <div class="co-icon" style="background:${co.color||'var(--bg4)'};color:${co.textColor||'var(--accent)'};">${co.name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-weight:600;font-size:15px;">${esc(co.name)}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(co.industry||'')} ${co.country?'· '+esc(co.country):''}</div>
+      </div>
+      <svg style="margin-left:auto;color:var(--text3);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  `).join('');
+}
+
+function selectCompany(id){
+  state.companyId=id;
+  const co=getCompany(id);
+  document.getElementById('login-co-initial').textContent=co.name.charAt(0).toUpperCase();
+  document.getElementById('login-co-name').innerHTML=esc(co.name);
+  document.getElementById('login-co-sub').textContent='Staff Portal';
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pw').value='';
+  hideAlert('login-alert');
+  showScreen('login-screen');
+}
+
+// ============================================================
+//  ADD COMPANY
+// ============================================================
+function showAddCompany(){
+  clearForm(['co-name-input','co-industry','co-country','co-address','co-phone','co-email','co-admin-name','co-admin-id','co-admin-pw','co-admin-pw2']);
+  hideAlert('co-form-alert');
+  showModal('modal-add-company');
+}
+
+function registerCompany(){
+  const name=val('co-name-input');
+  const adminName=val('co-admin-name');
+  const adminId=val('co-admin-id');
+  const adminPw=val('co-admin-pw');
+  const adminPw2=val('co-admin-pw2');
+  if(!name||!adminName||!adminId||!adminPw){showAlert('co-form-alert','All required fields must be filled.','danger');return;}
+  if(adminPw!==adminPw2){showAlert('co-form-alert','Passwords do not match.','danger');return;}
+  if(adminPw.length<6){showAlert('co-form-alert','Password must be at least 6 characters.','danger');return;}
+
+  const id='co_'+Date.now();
+  const companies=getCompanies();
+  if(companies.find(c=>c.name.toLowerCase()===name.toLowerCase())){showAlert('co-form-alert','A company with this name already exists.','danger');return;}
+
+  const colors=[
+    {bg:'rgba(0,212,170,.15)',txt:'#00d4aa'},
+    {bg:'rgba(0,153,255,.15)',txt:'#0099ff'},
+    {bg:'rgba(245,158,11,.15)',txt:'#f59e0b'},
+    {bg:'rgba(239,68,68,.15)',txt:'#ef4444'}
+  ];
+  const c=colors[companies.length%colors.length];
+
+  const newCompany={
+    id,name,industry:val('co-industry'),country:val('co-country'),
+    address:val('co-address'),phone:val('co-phone'),email:val('co-email'),
+    color:c.bg,textColor:c.txt,createdAt:new Date().toISOString()
+  };
+  companies.push(newCompany);
+  saveCompanies(companies);
+
+  // Create admin
+  const staff=getStaff(id);
+  staff.push({
+    id:adminId,name:adminName,email:val('co-email'),
+    role:adminName,department:'Management',phone:val('co-phone'),
+    password:adminPw,systemRole:'manager',
+    companyId:id,createdAt:new Date().toISOString()
+  });
+  saveStaff(id,staff);
+
+  closeModal('modal-add-company');
+  renderCompanyScreen();
+  showAlert('co-form-alert','Company created successfully!','success');
+  setTimeout(()=>selectCompany(id),800);
+}
+
+// ============================================================
+//  LOGIN
+// ============================================================
+function doLogin(){
+  const staffId=val('login-id').trim();
+  const pw=val('login-pw');
+  if(!staffId||!pw){showAlert('login-alert','Please enter your Staff ID and Password.','danger');return;}
+
+  const staff=getStaff(state.companyId);
+  const user=staff.find(s=>s.id===staffId&&s.password===pw);
+  if(!user){showAlert('login-alert','Invalid Staff ID or Password.','danger');return;}
+
+  state.user=user;
+  loadUserSession();
+  showScreen('main-screen');
+}
+
+function loadUserSession(){
+  const u=state.user;
+  document.getElementById('user-avatar-btn').textContent=initials(u.name);
+
+  // Load today's log
+  const today=todayStr();
+  const logs=getLogs(state.companyId);
+  state.todayLog=logs.find(l=>l.staffId===u.id&&l.date===today)||null;
+  state.signedIn=state.todayLog&&state.todayLog.signInTime&&!state.todayLog.signOutTime;
+  state.tasks=state.todayLog?state.todayLog.tasks||[]:[];
+
+  // Show manager tabs
+  if(u.systemRole==='manager'){
+    document.getElementById('nav-reports').classList.remove('hidden');
+    document.getElementById('nav-staff').classList.remove('hidden');
+  } else {
+    document.getElementById('nav-reports').classList.add('hidden');
+    document.getElementById('nav-staff').classList.add('hidden');
+  }
+
+  updateDashboard();
+  renderTasks();
+  captureLocation('loc-dot','loc-text',loc=>{state.currentLocation=loc;});
+}
+
+// ============================================================
+//  DASHBOARD
+// ============================================================
+function updateDashboard(){
+  const log=state.todayLog;
+  document.getElementById('stat-status').textContent=
+    !log?'Not Signed In': log.signOutTime?'Signed Out':'Signed In';
+  document.getElementById('stat-signin').textContent=
+    log&&log.signInTime?log.signInTime.split('T')[1].substring(0,5):'—';
+  document.getElementById('stat-tasks').textContent=state.tasks.length;
+
+  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+  document.getElementById('stat-value').textContent='₦'+total.toLocaleString('en-NG');
+
+  const area=document.getElementById('signin-btn-area');
+  const co=getCompany(state.companyId);
+  if(!log||(!log.signInTime)){
+    area.innerHTML=`
+      <div style="background:rgba(0,212,170,.06);border:1.5px dashed var(--accent);border-radius:12px;padding:1.25rem;text-align:center;">
+        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;">You have not signed in today. Sign in to start tracking your day.</p>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.85rem;" onclick="doSignIn()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Sign In for ${co?esc(co.name):'Today'}
+        </button>
+      </div>`;
+  } else if(!log.signOutTime){
+    area.innerHTML=`
+      <div style="background:rgba(239,68,68,.06);border:1.5px dashed var(--danger);border-radius:12px;padding:1.25rem;text-align:center;">
+        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;">You are currently signed in. Complete your tasks before signing out.</p>
+        <button class="btn btn-danger" style="width:100%;justify-content:center;padding:.85rem;" onclick="initiateSignOut()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>`;
+  } else {
+    area.innerHTML=`
+      <div style="background:rgba(34,197,94,.06);border:1.5px solid rgba(34,197,94,.2);border-radius:12px;padding:1.25rem;text-align:center;">
+        <span class="badge badge-success" style="font-size:13px;padding:.4rem 1rem;">Day Complete ✓</span>
+        <p style="font-size:13px;color:var(--text2);margin-top:.75rem;">You signed out at ${log.signOutTime.split('T')[1].substring(0,5)}. See you tomorrow!</p>
+      </div>`;
+  }
+}
+
+// ============================================================
+//  SIGN IN
+// ============================================================
+function doSignIn(){
+  if(!state.currentLocation){
+    showAlert('main-alert','Waiting for location. Please try again in a moment.','warn');
+    return;
+  }
+  hideAlert('main-alert');
+  const now=new Date();
+  const log={
+    id:'log_'+Date.now(),
+    staffId:state.user.id,
+    staffName:state.user.name,
+    companyId:state.companyId,
+    date:todayStr(),
+    signInTime:now.toISOString(),
+    signInLocation:state.currentLocation,
+    signOutTime:null,
+    signOutLocation:null,
+    tasks:[]
+  };
+  const logs=getLogs(state.companyId);
+  logs.push(log);
+  saveLogs(state.companyId,logs);
+  state.todayLog=log;
+  state.signedIn=true;
+  state.tasks=[];
+  updateDashboard();
+  renderTasks();
+  showAlert('main-alert','Signed in successfully at '+now.toLocaleTimeString('en-NG'),'success');
+  setTimeout(()=>hideAlert('main-alert'),3000);
+}
+
+// ============================================================
+//  SIGN OUT
+// ============================================================
+function initiateSignOut(){
+  if(state.tasks.length===0){
+    showAlert('main-alert','You must add at least one completed task before signing out.','warn');
+    return;
+  }
+  const invalid=state.tasks.filter(t=>!t.description||!t.description.trim()||(parseFloat(t.value)||0)===0);
+  if(invalid.length>0){
+    showAlert('main-alert','All tasks must have a description and a value greater than ₦0.','warn');
+    switchTab('tasks');
+    return;
+  }
+  hideAlert('main-alert');
+  // Preview tasks
+  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+  document.getElementById('task-summary-preview').innerHTML=`
+    <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem;">Tasks completed today:</div>
+    <div style="background:var(--bg3);border-radius:8px;padding:.75rem;font-size:13px;">
+      ${state.tasks.map((t,i)=>`<div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span>${i+1}. ${esc(t.description.substring(0,40))}…</span><span style="color:var(--success);font-family:var(--font-mono);">₦${(parseFloat(t.value)||0).toLocaleString()}</span></div>`).join('')}
+      <div style="border-top:1px solid var(--border);margin-top:.5rem;padding-top:.5rem;display:flex;justify-content:space-between;font-weight:600;"><span>Total</span><span style="color:var(--success);font-family:var(--font-mono);">₦${total.toLocaleString('en-NG')}</span></div>
+    </div>`;
+
+  // Get signout location
+  captureLocation('signout-loc-dot','signout-loc-text',loc=>{state.signoutLocation=loc;});
+  showModal('modal-signout');
+}
+
+function confirmSignOut(){
+  if(!state.signoutLocation){
+    showAlert('signout-alert','Location not yet acquired. Please wait.','warn');
+    return;
+  }
+  const now=new Date();
+  const logs=getLogs(state.companyId);
+  const idx=logs.findIndex(l=>l.id===state.todayLog.id);
+  if(idx>-1){
+    logs[idx].signOutTime=now.toISOString();
+    logs[idx].signOutLocation=state.signoutLocation;
+    logs[idx].tasks=state.tasks;
+    saveLogs(state.companyId,logs);
+    state.todayLog=logs[idx];
+  }
+  state.signedIn=false;
+  closeModal('modal-signout');
+  updateDashboard();
+  showAlert('main-alert','Signed out successfully at '+now.toLocaleTimeString('en-NG'),'success');
+  setTimeout(()=>hideAlert('main-alert'),3000);
+}
+
+// ============================================================
+//  TASKS
+// ============================================================
+function renderTasks(){
+  const container=document.getElementById('tasks-container');
+  const lockedMsg=document.getElementById('tasks-locked-msg');
+  const addBtn=document.getElementById('add-task-btn');
+  const footer=document.getElementById('tasks-footer');
+
+  if(!state.todayLog||!state.todayLog.signInTime){
+    lockedMsg.classList.remove('hidden');
+    addBtn.style.display='none';
+    footer.style.display='none';
+    container.innerHTML='';
+    return;
+  }
+  lockedMsg.classList.add('hidden');
+
+  if(state.todayLog.signOutTime){
+    addBtn.style.display='none';
+    container.innerHTML=state.tasks.map((t,i)=>`
+      <div class="task-item">
+        <div class="task-header">
+          <span class="task-num">Task ${i+1}</span>
+          <span class="badge badge-success">₦${(parseFloat(t.value)||0).toLocaleString('en-NG')}</span>
+        </div>
+        <p style="font-size:14px;">${esc(t.description)}</p>
+      </div>`).join('')||'<p style="color:var(--text3);font-size:14px;">No tasks recorded.</p>';
+  } else {
+    addBtn.style.display='block';
+    footer.style.display='block';
+    container.innerHTML=state.tasks.map((t,i)=>`
+      <div class="task-item">
+        <div class="task-header">
+          <span class="task-num">Task ${i+1}</span>
+          <button class="btn btn-sm btn-danger btn-icon" onclick="removeTask(${i})" title="Remove">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem;">
+          <textarea rows="2" placeholder="Describe what you did…" style="resize:vertical;"
+            onchange="updateTask(${i},'description',this.value)">${esc(t.description||'')}</textarea>
+        </div>
+        <div class="value-field">
+          <span class="prefix">₦</span>
+          <input type="number" min="0" placeholder="Value added"
+            value="${t.value||''}"
+            onchange="updateTask(${i},'value',this.value)"
+            style="font-family:var(--font-mono);"/>
+        </div>
+      </div>`).join('');
+  }
+  updateTotalValueDisplay();
+}
+
+function addTask(){
+  state.tasks.push({description:'',value:''});
+  renderTasks();
+  saveTodayTasks();
+  setTimeout(()=>{
+    const items=document.querySelectorAll('.task-item');
+    if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+function removeTask(i){
+  state.tasks.splice(i,1);
+  renderTasks();
+  saveTodayTasks();
+}
+
+function updateTask(i,field,val){
+  state.tasks[i][field]=val;
+  updateTotalValueDisplay();
+  updateDashboard();
+  saveTodayTasks();
+}
+
+function saveTodayTasks(){
+  if(!state.todayLog)return;
+  const logs=getLogs(state.companyId);
+  const idx=logs.findIndex(l=>l.id===state.todayLog.id);
+  if(idx>-1){logs[idx].tasks=state.tasks;saveLogs(state.companyId,logs);}
+}
+
+function updateTotalValueDisplay(){
+  const total=state.tasks.reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+  const el=document.getElementById('total-value-display');
+  if(el)el.textContent='₦'+total.toLocaleString('en-NG');
+  document.getElementById('stat-value').textContent='₦'+total.toLocaleString('en-NG');
+  document.getElementById('stat-tasks').textContent=state.tasks.length;
+}
+
+// ============================================================
+//  STAFF MANAGEMENT
+// ============================================================
+function renderStaffList(){
+  const staff=getStaff(state.companyId);
+  const container=document.getElementById('staff-list-container');
+  if(!staff.length){
+    container.innerHTML='<p style="color:var(--text3);font-size:14px;">No staff registered yet.</p>';
+    return;
+  }
+  container.innerHTML=staff.map(s=>`
+    <div class="report-row" onclick="showStaffDetail('${s.id}')">
+      <div class="report-avatar">${initials(s.name)}</div>
+      <div class="report-info">
+        <div class="report-name">${esc(s.name)}</div>
+        <div class="report-meta">${esc(s.id)} · ${esc(s.role||'')}</div>
+      </div>
+      <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+    </div>`).join('');
+}
+
+function showRegisterStaff(){
+  clearForm(['s-name','s-id','s-email','s-role','s-dept','s-phone','s-pw']);
+  document.getElementById('s-sys-role').value='staff';
+  hideAlert('staff-form-alert');
+  showModal('modal-register-staff');
+}
+
+function registerStaff(){
+  const name=val('s-name');
+  const id=val('s-id');
+  const role=val('s-role');
+  const pw=val('s-pw');
+  if(!name||!id||!role||!pw){showAlert('staff-form-alert','Name, Staff ID, Job Role, and Password are required.','danger');return;}
+  if(pw.length<6){showAlert('staff-form-alert','Password must be at least 6 characters.','danger');return;}
+
+  const staff=getStaff(state.companyId);
+  if(staff.find(s=>s.id===id)){showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
+
+  staff.push({
+    id,name,email:val('s-email'),role,
+    department:val('s-dept'),phone:val('s-phone'),
+    password:pw,systemRole:val('s-sys-role'),
+    companyId:state.companyId,createdAt:new Date().toISOString()
+  });
+  saveStaff(state.companyId,staff);
+  closeModal('modal-register-staff');
+  renderStaffList();
+}
+
+function showStaffDetail(staffId){
+  const staff=getStaff(state.companyId);
+  const s=staff.find(x=>x.id===staffId);
+  if(!s)return;
+  const logs=getLogs(state.companyId).filter(l=>l.staffId===staffId);
+  const totalDays=logs.filter(l=>l.signOutTime).length;
+  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
+
+  document.getElementById('staff-detail-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(s.name)}</div>
+      <div>
+        <div style="font-size:17px;font-weight:600;">${esc(s.name)}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')}</div>
+      </div>
+      <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-left:auto;">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+    </div>
+    <div class="status-grid">
+      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${totalDays}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${totalVal.toLocaleString('en-NG')}</div></div>
+    </div>
+    <div style="margin-top:1rem;">
+      ${s.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📧 ${esc(s.email)}</div>`:''}
+      ${s.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📱 ${esc(s.phone)}</div>`:''}
+      ${s.department?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">🏢 ${esc(s.department)}</div>`:''}
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1rem;">
+      <button class="btn btn-sm ${s.systemRole==='manager'?'btn-danger':''}" style="flex:1;justify-content:center;"
+        onclick="toggleManagerRole('${s.id}')">
+        ${s.systemRole==='manager'?'Remove Manager Role':'Assign Manager Role'}
+      </button>
+    </div>`;
+  showModal('modal-staff-detail');
+}
+
+function toggleManagerRole(staffId){
+  const staff=getStaff(state.companyId);
+  const idx=staff.findIndex(s=>s.id===staffId);
+  if(idx>-1){
+    staff[idx].systemRole=staff[idx].systemRole==='manager'?'staff':'manager';
+    saveStaff(state.companyId,staff);
+    closeModal('modal-staff-detail');
+    renderStaffList();
+  }
+}
+
+// ============================================================
+//  REPORTS
+// ============================================================
+let reportTab='daily';
+function switchReportTab(tab){
+  reportTab=tab;
+  document.querySelectorAll('#tab-reports .tab').forEach((t,i)=>{
+    t.classList.toggle('active',['daily','staff','summary'][i]===tab);
+  });
+  ['report-daily','report-staff','report-summary'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  document.getElementById('report-'+tab).style.display='block';
+  renderReport(tab);
+}
+
+function renderReport(tab){
+  const logs=getLogs(state.companyId);
+  const staff=getStaff(state.companyId);
+
+  if(tab==='daily'){
+    const sorted=[...logs].sort((a,b)=>new Date(b.signInTime)-new Date(a.signInTime));
+    if(!sorted.length){document.getElementById('report-daily').innerHTML='<p style="color:var(--text3);font-size:14px;">No logs yet.</p>';return;}
+    document.getElementById('report-daily').innerHTML=sorted.map(l=>{
+      const total=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+      const st=staff.find(s=>s.id===l.staffId);
+      return `<div class="report-row" onclick="showLogDetail('${l.id}')">
+        <div class="report-avatar">${initials(l.staffName||'?')}</div>
+        <div class="report-info">
+          <div class="report-name">${esc(l.staffName||l.staffId)}</div>
+          <div class="report-meta">${l.date} · ${l.signInTime?l.signInTime.split('T')[1].substring(0,5):'?'} → ${l.signOutTime?l.signOutTime.split('T')[1].substring(0,5):'Still in'}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div class="report-value">₦${total.toLocaleString('en-NG')}</div>
+          <span class="badge ${l.signOutTime?'badge-success':'badge-warn'}" style="font-size:11px;">${l.signOutTime?'Complete':'Active'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(tab==='staff'){
+    const byStaff={};
+    logs.forEach(l=>{
+      if(!byStaff[l.staffId])byStaff[l.staffId]={name:l.staffName||l.staffId,days:0,value:0,tasks:0};
+      byStaff[l.staffId].days++;
+      byStaff[l.staffId].value+=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+      byStaff[l.staffId].tasks+=(l.tasks||[]).length;
+    });
+    const rows=Object.entries(byStaff).sort((a,b)=>b[1].value-a[1].value);
+    if(!rows.length){document.getElementById('report-staff').innerHTML='<p style="color:var(--text3);font-size:14px;">No data yet.</p>';return;}
+    document.getElementById('report-staff').innerHTML=rows.map(([id,d])=>`
+      <div class="report-row">
+        <div class="report-avatar">${initials(d.name)}</div>
+        <div class="report-info">
+          <div class="report-name">${esc(d.name)}</div>
+          <div class="report-meta">${d.days} day(s) · ${d.tasks} task(s)</div>
+        </div>
+        <div class="report-value">₦${d.value.toLocaleString('en-NG')}</div>
+      </div>`).join('');
+  }
+
+  if(tab==='summary'){
+    const totalStaff=staff.length;
+    const today=todayStr();
+    const todayLogs=logs.filter(l=>l.date===today);
+    const totalValue=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
+    const todayValue=todayLogs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
+    document.getElementById('report-summary').innerHTML=`
+      <div class="status-grid">
+        <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-val">${totalStaff}</div></div>
+        <div class="stat-card"><div class="stat-label">Logs Today</div><div class="stat-val accent">${todayLogs.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Today's Value</div><div class="stat-val">₦${todayValue.toLocaleString('en-NG')}</div></div>
+        <div class="stat-card"><div class="stat-label">All-Time Value</div><div class="stat-val">₦${totalValue.toLocaleString('en-NG')}</div></div>
+      </div>
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-header"><span class="card-title">Today's Active Staff</span></div>
+        ${todayLogs.length?todayLogs.map(l=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:14px;font-weight:500;">${esc(l.staffName||l.staffId)}</div>
+              <div style="font-size:12px;color:var(--text3);">In: ${l.signInTime?l.signInTime.split('T')[1].substring(0,5):'?'}</div>
+            </div>
+            <span class="badge ${l.signOutTime?'badge-success':'badge-warn'}">${l.signOutTime?'Out':'In'}</span>
+          </div>`).join(''):
+          '<p style="color:var(--text3);font-size:13px;">No staff checked in today.</p>'}
+      </div>`;
+  }
+}
+
+function showLogDetail(logId){
+  const logs=getLogs(state.companyId);
+  const l=logs.find(x=>x.id===logId);
+  if(!l)return;
+  const total=(l.tasks||[]).reduce((a,t)=>a+(parseFloat(t.value)||0),0);
+  document.getElementById('report-detail-content').innerHTML=`
+    <div style="font-family:var(--font-mono);font-size:15px;font-weight:700;margin-bottom:1rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
+    <div class="status-grid">
+      <div class="stat-card">
+        <div class="stat-label">Sign In</div>
+        <div class="stat-val">${l.signInTime?l.signInTime.split('T')[1].substring(0,8):'—'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sign Out</div>
+        <div class="stat-val">${l.signOutTime?l.signOutTime.split('T')[1].substring(0,8):'Active'}</div>
+      </div>
+    </div>
+    ${l.signInLocation?`
+    <div style="margin:.75rem 0;padding:.75rem;background:var(--bg3);border-radius:8px;font-size:12px;">
+      <div style="color:var(--text3);margin-bottom:.25rem;">Sign-in Location</div>
+      <div>📍 ${esc(l.signInLocation.address||'')} <span style="color:var(--text3);">(±${l.signInLocation.accuracy}m)</span></div>
+    </div>`:''}
+    ${l.signOutLocation?`
+    <div style="margin:.75rem 0;padding:.75rem;background:var(--bg3);border-radius:8px;font-size:12px;">
+      <div style="color:var(--text3);margin-bottom:.25rem;">Sign-out Location</div>
+      <div>📍 ${esc(l.signOutLocation.address||'')} <span style="color:var(--text3);">(±${l.signOutLocation.accuracy}m)</span></div>
+    </div>`:''}
+    <div style="margin-top:1rem;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;">Tasks Completed</div>
+      ${(l.tasks||[]).map((t,i)=>`
+        <div style="padding:.75rem;background:var(--bg3);border-radius:8px;margin-bottom:.5rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;">
+            <span style="font-size:12px;color:var(--accent);font-family:var(--font-mono);">Task ${i+1}</span>
+            <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${(parseFloat(t.value)||0).toLocaleString('en-NG')}</span>
+          </div>
+          <p style="font-size:13px;">${esc(t.description||'')}</p>
+        </div>`).join('')}
+      ${(l.tasks||[]).length?`
+        <div style="display:flex;justify-content:space-between;padding:.65rem .9rem;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-weight:600;">
+          <span>Total Value</span>
+          <span style="font-family:var(--font-mono);color:var(--success);">₦${total.toLocaleString('en-NG')}</span>
+        </div>`:'<p style="font-size:13px;color:var(--text3);">No tasks recorded.</p>'}
+    </div>`;
+  showModal('modal-report-detail');
+}
+
+// ============================================================
+//  PROFILE
+// ============================================================
+function renderProfile(){
+  const u=state.user;
+  const co=getCompany(state.companyId);
+  const logs=getLogs(state.companyId).filter(l=>l.staffId===u.id);
+  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat(t.value)||0),0),0);
+
+  document.getElementById('profile-content').innerHTML=`
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+        <div style="width:56px;height:56px;border-radius:14px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:22px;color:var(--accent);">${initials(u.name)}</div>
+        <div>
+          <div style="font-size:17px;font-weight:600;">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.role||'')}</div>
+          <span class="badge ${u.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:4px;">${u.systemRole==='manager'?'Manager':'Staff'}</span>
+        </div>
+      </div>
+      ${u.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📧 ${esc(u.email)}</div>`:''}
+      ${u.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.4rem;">📱 ${esc(u.phone)}</div>`:''}
+      ${u.department?`<div style="font-size:13px;color:var(--text2);">🏢 ${esc(u.department)}</div>`:''}
+    </div>
+    <div class="status-grid">
+      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${totalVal.toLocaleString('en-NG')}</div></div>
+    </div>
+    ${co?`
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title" style="margin-bottom:.75rem;">Company</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">${esc(co.name)}</div>
+      ${co.industry?`<div style="font-size:13px;color:var(--text3);">${esc(co.industry)}</div>`:''}
+      ${co.address?`<div style="font-size:13px;color:var(--text3);">${esc(co.address)}</div>`:''}
+    </div>`:''}
+    <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:1.25rem;" onclick="doLogout()">
+      Sign Out of Account
+    </button>`;
+}
+
+// ============================================================
+//  USER MENU
+// ============================================================
+function showUserMenu(){
+  const u=state.user;
+  document.getElementById('user-menu-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);">${initials(u.name)}</div>
+      <div>
+        <div style="font-weight:600;">${esc(u.name)}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(u.id)}</div>
+      </div>
+    </div>
+    <button class="btn" style="width:100%;justify-content:center;margin-bottom:.5rem;" onclick="closeModal('modal-user-menu');switchTab('profile')">View Profile</button>
+    <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>`;
+  showModal('modal-user-menu');
+}
+
+function doLogout(){
+  state.user=null;state.companyId=null;state.signedIn=false;
+  state.todayLog=null;state.tasks=[];state.currentLocation=null;
+  closeModal('modal-user-menu');
+  showScreen('company-screen');
+  renderCompanyScreen();
+}
+
+// ============================================================
+//  TAB NAVIGATION
+// ============================================================
+function switchTab(tab){
+  state.tab=tab;
+  document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
+  document.getElementById('tab-'+tab).style.display='block';
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const navEl=document.getElementById('nav-'+tab);
+  if(navEl)navEl.classList.add('active');
+
+  if(tab==='staff')renderStaffList();
+  if(tab==='reports'){switchReportTab('daily');}
+  if(tab==='profile')renderProfile();
+  if(tab==='tasks')renderTasks();
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function showModal(id){document.getElementById(id).classList.remove('hidden');}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+
+function showAlert(id,msg,type){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.className='alert alert-'+type;
+  el.textContent=msg;
+}
+function hideAlert(id){
+  const el=document.getElementById(id);
+  if(el)el.classList.add('hidden');
+}
+
+function val(id){return (document.getElementById(id)||{}).value||'';}
+function clearForm(ids){ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function initials(name){return name.split(' ').slice(0,2).map(n=>n.charAt(0).toUpperCase()).join('');}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.add('hidden');});
+});
+
+// ============================================================
+//  DEMO DATA (runs once)
+// ============================================================
+(function seedDemoIfEmpty(){
+  if(getCompanies().length)return;
+  const id='co_demo';
+  saveCompanies([{
+    id,name:'Demo Company Ltd',industry:'Technology',country:'Nigeria',
+    address:'1 Victoria Island, Lagos',color:'rgba(0,212,170,.15)',textColor:'#00d4aa',
+    createdAt:new Date().toISOString()
+  }]);
+  saveStaff(id,[
+    {id:'MGR001',name:'Amara Okafor',email:'amara@demo.com',role:'General Manager',
+     department:'Management',phone:'+2348012345678',password:'manager123',
+     systemRole:'manager',companyId:id,createdAt:new Date().toISOString()},
+    {id:'STF001',name:'Chidi Eze',email:'chidi@demo.com',role:'Sales Executive',
+     department:'Sales',phone:'+2348087654321',password:'staff123',
+     systemRole:'staff',companyId:id,createdAt:new Date().toISOString()}
+  ]);
+})();
+</script>
+</body>
+</html>
