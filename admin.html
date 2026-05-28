@@ -351,9 +351,12 @@ function renderDashboard(){
       <div>
         <div style="font-weight:500;">${esc(c.name)}</div>
         <div style="font-size:12px;color:var(--text3);">${esc(c.industry||'')} · ${esc(c.country||'')}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Staff: ${getStaff(c.id).length} · ID: ${c.id}</div>
       </div>
-      <span class="badge badge-success">${getStaff(c.id).length} staff</span>
-    </div>`).join(''):'<p style="color:var(--text3);">No companies yet.</p>';
+      <a href="index.html" style="font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:.25rem .6rem;border-radius:6px;">Staff Portal →</a>
+    </div>`).join(''):`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.85rem;font-size:13px;color:#ef4444;">
+      No companies yet. Click <strong>Companies</strong> in the sidebar → <strong>New Company</strong> to register your first company.
+    </div>`;
 }
 
 // ===== COMPANIES =====
@@ -407,16 +410,24 @@ function saveCompany(){
   const name=v('co-name');
   if(!name){showAlert('co-modal-alert','Company name is required.','danger');return;}
   const cos=getCompanies();
+  let savedId=null;
   if(!editingCompanyId){
     const mgrName=v('co-mgr-name'),mgrId=v('co-mgr-id'),mgrPw=v('co-mgr-pw'),mgrPw2=v('co-mgr-pw2');
     if(!mgrName||!mgrId||!mgrPw){showAlert('co-modal-alert','Manager name, ID and password are required.','danger');return;}
     if(mgrPw!==mgrPw2){showAlert('co-modal-alert','Passwords do not match.','danger');return;}
     if(mgrPw.length<6){showAlert('co-modal-alert','Password must be at least 6 characters.','danger');return;}
     const id='co_'+Date.now();
+    savedId=id;
     const colors=[{bg:'rgba(0,212,170,.15)',txt:'#00d4aa'},{bg:'rgba(0,153,255,.15)',txt:'#0099ff'},{bg:'rgba(245,158,11,.15)',txt:'#f59e0b'},{bg:'rgba(239,68,68,.15)',txt:'#ef4444'}];
     const c=colors[cos.length%colors.length];
     cos.push({id,name,industry:v('co-industry'),country:v('co-country'),address:v('co-address'),contactPerson:v('co-contact'),email:v('co-email'),phone:v('co-phone'),color:c.bg,textColor:c.txt,createdAt:new Date().toISOString()});
     saveCompanies(cos);
+    // Verify it saved
+    const check=getCompanies();
+    if(!check.find(c=>c.id===id)){
+      showAlert('co-modal-alert','Save failed — localStorage may be full or blocked. Try a different browser.','danger');
+      return;
+    }
     const staff=getStaff(id);
     staff.push({id:mgrId,name:mgrName,email:v('co-email'),role:'General Manager',department:'Management',phone:v('co-phone'),password:mgrPw,systemRole:'manager',companyId:id,createdAt:new Date().toISOString()});
     saveStaff(id,staff);
@@ -425,7 +436,19 @@ function saveCompany(){
     if(idx>-1){Object.assign(cos[idx],{name,industry:v('co-industry'),country:v('co-country'),address:v('co-address'),contactPerson:v('co-contact'),email:v('co-email'),phone:v('co-phone')});}
     saveCompanies(cos);
   }
-  closeModal('modal-company');renderCompanies();renderDashboard();
+  closeModal('modal-company');
+  renderCompanies();
+  renderDashboard();
+  // Show prominent success banner if new company
+  if(savedId){
+    const banner=document.createElement('div');
+    banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#111827;border:1.5px solid #00d4aa;border-radius:12px;padding:1rem 1.5rem;z-index:999;text-align:center;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    banner.innerHTML=`<div style="color:#00d4aa;font-weight:700;font-size:15px;margin-bottom:.5rem;">✓ Company "${name}" created!</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:.85rem;">Staff ID: <strong style="color:#e8edf5;">${v('co-mgr-id')}</strong> · Password saved</div>
+      <a href="index.html" style="display:inline-block;background:#00d4aa;color:#0a0f1e;padding:.6rem 1.25rem;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">→ Go to Staff Portal Login</a>
+      <div style="margin-top:.6rem;"><button onclick="this.parentElement.parentElement.remove()" style="background:transparent;border:none;color:#64748b;font-size:12px;cursor:pointer;">Dismiss</button></div>`;
+    document.body.appendChild(banner);
+  }
 }
 
 // ===== USERS =====

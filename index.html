@@ -741,22 +741,19 @@ function captureLocation(dotId,txtId,cb){
 // ========================================
 //  INIT
 // ========================================
-window.addEventListener('load',()=>{
-  updateClock();renderCompanyScreen();
-  // Force service worker update immediately
+window.addEventListener('load',async()=>{
+  // Unregister ALL old service workers so stale cache never blocks updates
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').then(reg=>{
-      reg.update();
-      if(reg.waiting){reg.waiting.postMessage({type:'SKIP_WAITING'});}
-    }).catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      // New SW activated — reload once to get fresh HTML
-      if(!sessionStorage.getItem('swReloaded')){
-        sessionStorage.setItem('swReloaded','1');
-        location.reload();
-      }
-    });
+    const regs=await navigator.serviceWorker.getRegistrations();
+    for(const r of regs) await r.unregister();
+    // Clear all caches
+    const keys=await caches.keys();
+    for(const k of keys) await caches.delete(k);
+    // Re-register fresh
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
+  updateClock();
+  renderCompanyScreen();
   window.addEventListener('online',()=>document.getElementById('offline-banner').classList.add('hidden'));
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
@@ -772,16 +769,27 @@ function diagStorage(){
   const cos=getCompanies();
   const el=document.getElementById('diag-result');
   el.style.display='block';
+  // Show everything in localStorage with cwx_ prefix
+  const allKeys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('cwx_'))allKeys.push(k);
+  }
   if(!cos.length){
-    el.innerHTML=`<span style="color:var(--danger);">⚠ No companies found in localStorage key "cwx_companies"</span><br><br>
-    This means either:<br>
-    1. The company was registered in a different browser or device<br>
-    2. Browser data was cleared<br>
-    3. You are using a different profile<br><br>
-    <strong>Solution:</strong> Go to <a href="admin.html">Admin Portal</a> on this same browser and register the company again.`;
+    el.innerHTML=`<div style="color:var(--danger);font-weight:600;margin-bottom:.5rem;">⚠ No companies in localStorage</div>
+    <div style="color:var(--text2);margin-bottom:.5rem;">Keys found with "cwx_" prefix: <strong>${allKeys.length===0?'NONE':allKeys.join(', ')}</strong></div>
+    <div style="color:var(--text2);margin-bottom:.75rem;">URL: <strong>${location.href}</strong></div>
+    <div style="color:var(--warn);margin-bottom:.5rem;font-size:11px;">This means the Admin Portal has not saved data to this browser yet.</div>
+    <div style="font-size:11px;color:var(--text2);">
+      ✅ Fix: Open <strong>admin.html</strong> in <strong>this same browser tab</strong> (not a new window),<br>
+      register your company, then come back here and tap Refresh.
+    </div>`;
   } else {
-    el.innerHTML=`<span style="color:var(--success);">✓ Found ${cos.length} company/companies:</span><br><br>`
-      +cos.map(c=>`• ${c.name} (ID: ${c.id})`).join('<br>');
+    el.innerHTML=`<div style="color:var(--success);font-weight:600;margin-bottom:.5rem;">✓ ${cos.length} company found — should appear above</div>`
+      +cos.map(c=>`<div style="margin-bottom:.3rem;">• <strong>${esc(c.name)}</strong> (${c.id})<br>
+        <span style="color:var(--text3);font-size:11px;">Staff: ${getStaff(c.id).length} registered</span></div>`).join('')
+      +`<div style="margin-top:.5rem;font-size:11px;color:var(--text3);">If company cards are not showing above, tap Refresh.</div>
+      <button onclick="renderCompanyScreen();document.getElementById('diag-result').style.display='none';" class="btn btn-primary btn-sm" style="margin-top:.5rem;">↻ Reload Company List</button>`;
   }
 }
 
