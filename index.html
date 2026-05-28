@@ -173,18 +173,53 @@ tr:last-child td{border-bottom:none;}
       <p style="color:var(--text3);font-size:13px;margin-top:5px;">Select your company workspace</p>
     </div>
     <div id="company-list" style="margin-bottom:1rem;"></div>
-    <div style="text-align:center;margin-top:1.25rem;font-size:12px;color:var(--text3);">
-      Need to add a company? <a href="admin.html">Admin Portal →</a>
+    <div style="text-align:center;margin-top:1.25rem;">
+      <a href="admin.html" style="color:var(--accent);font-size:13px;">Admin Portal →</a>
     </div>
     <div style="text-align:center;margin-top:.6rem;">
       <button class="btn btn-sm" onclick="diagStorage()" style="font-size:11px;color:var(--text3);">🔍 Diagnose Storage</button>
+      <button class="btn btn-sm" onclick="renderCompanyScreen()" style="font-size:11px;margin-left:6px;">↻ Refresh</button>
     </div>
-    <div id="diag-result" style="display:none;margin-top:.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.85rem;font-size:12px;font-family:var(--font-mono);color:var(--text2);word-break:break-all;"></div>
+    <div id="diag-result" style="display:none;margin-top:.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.85rem;font-size:12px;color:var(--text2);word-break:break-all;line-height:1.7;"></div>
     <div style="text-align:center;margin-top:.75rem;">
       <button class="theme-toggle" onclick="toggleTheme()"></button>
     </div>
   </div>
 </div>
+<!-- Immediately render companies without waiting for window.load -->
+<script>
+(function renderCoNow(){
+  try{
+    var raw=localStorage.getItem('cwx_companies');
+    var list=document.getElementById('company-list');
+    if(!list)return;
+    if(!raw){
+      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:#00d4aa;">Register one in Admin Portal →</a></div>';
+      return;
+    }
+    var cos=JSON.parse(raw);
+    if(!cos||!cos.length){
+      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:#00d4aa;">Register one in Admin Portal →</a></div>';
+      return;
+    }
+    list.innerHTML=cos.map(function(co){
+      var initLetter=(co.name||'?').charAt(0).toUpperCase();
+      var bg=co.color||'rgba(0,212,170,.15)';
+      var tc=co.textColor||'#00d4aa';
+      var name=(co.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var sub=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+initLetter+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+name+'</div><div style="font-size:11px;color:var(--text3);">'+sub+'</div></div>'
+        +'<svg style="margin-left:auto;color:var(--text3);flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
+        +'</div>';
+    }).join('');
+  }catch(e){
+    var list=document.getElementById('company-list');
+    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;padding:.5rem;">Error reading companies: '+e.message+'</div>';
+  }
+})();
+</script>
 
 <!-- ========== LOGIN ========== -->
 <div class="screen" id="login-screen">
@@ -797,24 +832,35 @@ function diagStorage(){
 //  COMPANY SELECT
 // ========================================
 function renderCompanyScreen(){
-  const cos=getCompanies();
-  const list=document.getElementById('company-list');
-  if(!cos.length){
-    list.innerHTML=`
-      <div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:13px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:.75rem;">
-        No companies found in this browser.<br>
-        <span style="font-size:12px;">Companies are registered in the Admin Portal on the same device/browser.</span>
-      </div>
-      <a href="admin.html" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:.5rem;">Go to Admin Portal →</a>
-      <button class="btn" style="width:100%;justify-content:center;" onclick="location.reload()">↻ Refresh</button>`;
-    return;
+  try{
+    var raw=localStorage.getItem('cwx_companies');
+    var list=document.getElementById('company-list');
+    if(!list)return;
+    if(!raw){
+      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:var(--accent);">Register one in Admin Portal →</a></div>';
+      return;
+    }
+    var cos=JSON.parse(raw);
+    if(!cos||!cos.length){
+      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:var(--accent);">Register one in Admin Portal →</a></div>';
+      return;
+    }
+    list.innerHTML=cos.map(function(co){
+      var initLetter=(co.name||'?').charAt(0).toUpperCase();
+      var bg=co.color||'rgba(0,212,170,.15)';
+      var tc=co.textColor||'#00d4aa';
+      var name=(co.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var sub=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+initLetter+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+name+'</div><div style="font-size:11px;color:var(--text3);">'+sub+'</div></div>'
+        +'<svg style="margin-left:auto;color:var(--text3);flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
+        +'</div>';
+    }).join('');
+  }catch(e){
+    var list=document.getElementById('company-list');
+    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;">Error: '+e.message+'</div>';
   }
-  list.innerHTML=cos.map(co=>`
-    <div onclick="selectCompany('${co.id}')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="width:44px;height:44px;border-radius:10px;background:${co.color||'rgba(0,212,170,.15)'};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:${co.textColor||'var(--accent)'};flex-shrink:0;">${co.name.charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">${esc(co.name)}</div><div style="font-size:11px;color:var(--text3);">${esc(co.industry||'')}${co.country?' · '+esc(co.country):''}</div></div>
-      <svg style="margin-left:auto;color:var(--text3);flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-    </div>`).join('');
 }
 
 function selectCompany(id){
