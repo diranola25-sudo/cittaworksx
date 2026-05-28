@@ -203,17 +203,57 @@ tr:last-child td{border-bottom:none;}
       var bg=co.color||'rgba(0,212,170,.15)';
       var tc=co.textColor||'#00d4aa';
       var l=(co.name||'?').charAt(0).toUpperCase();
-      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
-        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+l+'</div>'
-        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
-        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+      // Use data-coid attribute — avoids any quoting issues with company IDs
+      return '<div class="co-card" data-coid="'+co.id+'" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
+        +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;pointer-events:none;"><path d="M9 18l6-6-6-6"/></svg>'
         +'</div>';
     }).join('');
+    // Attach click handlers after DOM is ready — works even before main script loads
+    list.addEventListener('click',function(e){
+      var card=e.target.closest('.co-card');
+      if(!card)return;
+      var id=card.getAttribute('data-coid');
+      if(!id)return;
+      // Hover effect
+      card.style.borderColor='var(--accent)';
+      // If selectCompany is already defined, call it; otherwise store pending and show login directly
+      if(typeof selectCompany==='function'){
+        selectCompany(id);
+      } else {
+        // Fallback: set pending company and navigate to login screen manually
+        window._pendingCompanyId=id;
+        var co=cos.find(function(c){return c.id===id;});
+        var loginScreen=document.getElementById('login-screen');
+        var companyScreen=document.getElementById('company-screen');
+        var markEl=document.getElementById('login-co-mark');
+        var nameEl=document.getElementById('login-co-name');
+        if(co&&markEl)markEl.textContent=co.name.charAt(0).toUpperCase();
+        if(co&&nameEl)nameEl.textContent=co.name;
+        if(companyScreen)companyScreen.classList.remove('active');
+        if(loginScreen)loginScreen.classList.add('active');
+      }
+    });
+    // Hover styles via JS since CSS vars work
+    list.addEventListener('mouseover',function(e){
+      var card=e.target.closest('.co-card');
+      if(card)card.style.borderColor='var(--accent)';
+    });
+    list.addEventListener('mouseout',function(e){
+      var card=e.target.closest('.co-card');
+      if(card)card.style.borderColor='var(--border)';
+    });
   }catch(e){
     var list=document.getElementById('company-list');
     if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;padding:.75rem;background:rgba(239,68,68,.08);border-radius:8px;">Error loading companies: '+e.message+'</div>';
   }
 })();
+// Once the full page is loaded, re-run with proper selectCompany function attached
+document.addEventListener('DOMContentLoaded',function(){
+  if(typeof renderCompanyScreen==='function')renderCompanyScreen();
+});
+</script>
 </script>
 
 <!-- ========== LOGIN ========== -->
@@ -831,39 +871,53 @@ function renderCompanyScreen(){
     var raw=localStorage.getItem('cwx_companies');
     var list=document.getElementById('company-list');
     if(!list)return;
-    if(!raw){
-      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:var(--accent);">Register one in Admin Portal →</a></div>';
+    if(!raw||raw==='[]'){
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.<br><span style="font-size:12px;">Ask your administrator to register via the Admin Portal.</span></div>';
       return;
     }
     var cos=JSON.parse(raw);
-    if(!cos||!cos.length){
-      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:var(--accent);">Register one in Admin Portal →</a></div>';
+    if(!Array.isArray(cos)||!cos.length){
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.</div>';
       return;
     }
     list.innerHTML=cos.map(function(co){
-      var initLetter=(co.name||'?').charAt(0).toUpperCase();
+      var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var bg=co.color||'rgba(0,212,170,.15)';
       var tc=co.textColor||'#00d4aa';
-      var name=(co.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var sub=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
-        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+initLetter+'</div>'
-        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+name+'</div><div style="font-size:11px;color:var(--text3);">'+sub+'</div></div>'
-        +'<svg style="margin-left:auto;color:var(--text3);flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
+      var l=(co.name||'?').charAt(0).toUpperCase();
+      return '<div class="co-card" data-coid="'+co.id+'" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
+        +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;pointer-events:none;"><path d="M9 18l6-6-6-6"/></svg>'
         +'</div>';
     }).join('');
+    // selectCompany is now defined — attach clean handler
+    list.onclick=function(e){
+      var card=e.target.closest('.co-card');
+      if(card)selectCompany(card.getAttribute('data-coid'));
+    };
+    list.onmouseover=function(e){var c=e.target.closest('.co-card');if(c)c.style.borderColor='var(--accent)';};
+    list.onmouseout=function(e){var c=e.target.closest('.co-card');if(c)c.style.borderColor='var(--border)';};
   }catch(e){
     var list=document.getElementById('company-list');
-    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;">Error: '+e.message+'</div>';
+    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;padding:.75rem;">Error: '+e.message+'</div>';
   }
 }
 
 function selectCompany(id){
+  if(!id)id=window._pendingCompanyId;
+  window._pendingCompanyId=null;
+  if(!id)return;
+  S.companyId=id;
   const co=getCompany(id);
+  if(!co)return;
   document.getElementById('login-co-mark').textContent=co.name.charAt(0).toUpperCase();
   document.getElementById('login-co-name').textContent=co.name;
-  document.getElementById('login-id').value='';document.getElementById('login-pw').value='';
-  hideAlert('login-alert');showScreen('login-screen');
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pw').value='';
+  hideAlert('login-alert');
+  showScreen('login-screen');
 }
 
 // ========================================
