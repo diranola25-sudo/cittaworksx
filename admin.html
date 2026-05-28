@@ -112,6 +112,9 @@ tr:last-child td{border-bottom:none;}
       <h2 style="font-family:var(--font-mono);font-size:20px;">Citta<span style="color:var(--accent);">Works</span>X</h2>
       <p style="font-size:12px;color:var(--text3);margin-top:4px;">Admin Portal</p>
     </div>
+    <div style="background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);border-radius:8px;padding:.65rem .9rem;font-size:12px;color:var(--accent);margin-bottom:1rem;line-height:1.6;">
+      <strong>Important:</strong> Always open the Admin Portal and Staff Portal in the <strong>same browser</strong> on the same device. Data is stored locally per browser.
+    </div>
     <div id="login-alert" class="alert hidden"></div>
     <div class="form-group"><label>Email Address</label><input type="email" id="a-email" placeholder="admin@company.com"/></div>
     <div class="form-group"><label>Password</label><input type="password" id="a-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"/></div>
@@ -439,15 +442,21 @@ function saveCompany(){
   closeModal('modal-company');
   renderCompanies();
   renderDashboard();
-  // Show prominent success banner if new company
+  // After creating new company, navigate straight to staff portal (same tab = same localStorage)
   if(savedId){
+    const mgrIdVal=v('co-mgr-id');
     const banner=document.createElement('div');
-    banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#111827;border:1.5px solid #00d4aa;border-radius:12px;padding:1rem 1.5rem;z-index:999;text-align:center;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5);';
-    banner.innerHTML=`<div style="color:#00d4aa;font-weight:700;font-size:15px;margin-bottom:.5rem;">✓ Company "${name}" created!</div>
-      <div style="color:#94a3b8;font-size:13px;margin-bottom:.85rem;">Staff ID: <strong style="color:#e8edf5;">${v('co-mgr-id')}</strong> · Password saved</div>
-      <a href="index.html" style="display:inline-block;background:#00d4aa;color:#0a0f1e;padding:.6rem 1.25rem;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">→ Go to Staff Portal Login</a>
-      <div style="margin-top:.6rem;"><button onclick="this.parentElement.parentElement.remove()" style="background:transparent;border:none;color:#64748b;font-size:12px;cursor:pointer;">Dismiss</button></div>`;
+    banner.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    banner.innerHTML=`<div style="background:#111827;border:2px solid #00d4aa;border-radius:16px;padding:2rem;text-align:center;max-width:380px;width:90%;">
+      <div style="font-size:36px;margin-bottom:.75rem;">✅</div>
+      <div style="color:#00d4aa;font-weight:700;font-size:17px;margin-bottom:.5rem;">Company Created!</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:.25rem;"><strong style="color:#e8edf5;">${name}</strong> is ready.</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:1.25rem;">Manager Staff ID: <strong style="color:#e8edf5;">${mgrIdVal}</strong></div>
+      <div style="color:#f59e0b;font-size:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem;">You will be taken to the Staff Portal in the <strong>same browser tab</strong> so company data is shared.</div>
+      <button onclick="window.location.href='index.html'" style="width:100%;background:#00d4aa;color:#0a0f1e;border:none;padding:.8rem;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Go to Staff Portal Now →</button>
+    </div>`;
     document.body.appendChild(banner);
+    setTimeout(()=>{ window.location.href='index.html'; }, 4000);
   }
 }
 

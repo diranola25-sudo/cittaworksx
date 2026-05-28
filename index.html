@@ -172,51 +172,46 @@ tr:last-child td{border-bottom:none;}
       <h1 style="font-family:var(--font-mono);font-size:24px;font-weight:700;">Citta<span style="color:var(--accent);">Works</span>X</h1>
       <p style="color:var(--text3);font-size:13px;margin-top:5px;">Select your company workspace</p>
     </div>
-    <div id="company-list" style="margin-bottom:1rem;"></div>
-    <div style="text-align:center;margin-top:1.25rem;">
-      <a href="admin.html" style="color:var(--accent);font-size:13px;">Admin Portal →</a>
+    <div id="company-list" style="margin-bottom:1rem;min-height:60px;"></div>
+    <div style="text-align:center;margin-top:.75rem;">
+      <button class="btn btn-sm" onclick="renderCompanyScreen()" style="font-size:12px;">↻ Refresh</button>
     </div>
-    <div style="text-align:center;margin-top:.6rem;">
-      <button class="btn btn-sm" onclick="diagStorage()" style="font-size:11px;color:var(--text3);">🔍 Diagnose Storage</button>
-      <button class="btn btn-sm" onclick="renderCompanyScreen()" style="font-size:11px;margin-left:6px;">↻ Refresh</button>
-    </div>
-    <div id="diag-result" style="display:none;margin-top:.75rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.85rem;font-size:12px;color:var(--text2);word-break:break-all;line-height:1.7;"></div>
     <div style="text-align:center;margin-top:.75rem;">
       <button class="theme-toggle" onclick="toggleTheme()"></button>
     </div>
   </div>
 </div>
-<!-- Immediately render companies without waiting for window.load -->
+<!-- Render companies immediately on parse — no async dependency -->
 <script>
-(function renderCoNow(){
+(function(){
   try{
     var raw=localStorage.getItem('cwx_companies');
     var list=document.getElementById('company-list');
     if(!list)return;
-    if(!raw){
-      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:#00d4aa;">Register one in Admin Portal →</a></div>';
+    if(!raw||raw==='[]'||raw==='null'){
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.<br><span style="font-size:12px;margin-top:.3rem;display:block;">Ask your system administrator to register your company in the <strong style="color:var(--accent);">Admin Portal</strong>.</span></div>';
       return;
     }
     var cos=JSON.parse(raw);
-    if(!cos||!cos.length){
-      list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;text-align:center;font-size:13px;color:#ef4444;">No companies found.<br><a href="admin.html" style="color:#00d4aa;">Register one in Admin Portal →</a></div>';
+    if(!Array.isArray(cos)||!cos.length){
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.<br><span style="font-size:12px;margin-top:.3rem;display:block;">Ask your system administrator to register your company.</span></div>';
       return;
     }
     list.innerHTML=cos.map(function(co){
-      var initLetter=(co.name||'?').charAt(0).toUpperCase();
+      var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var bg=co.color||'rgba(0,212,170,.15)';
       var tc=co.textColor||'#00d4aa';
-      var name=(co.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var sub=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;transition:border-color .15s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
-        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+initLetter+'</div>'
-        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+name+'</div><div style="font-size:11px;color:var(--text3);">'+sub+'</div></div>'
-        +'<svg style="margin-left:auto;color:var(--text3);flex-shrink:0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
+      var l=(co.name||'?').charAt(0).toUpperCase();
+      return '<div onclick="selectCompany(\''+co.id+'\')" style="background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+l+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
         +'</div>';
     }).join('');
   }catch(e){
     var list=document.getElementById('company-list');
-    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;padding:.5rem;">Error reading companies: '+e.message+'</div>';
+    if(list)list.innerHTML='<div style="color:#ef4444;font-size:12px;padding:.75rem;background:rgba(239,68,68,.08);border-radius:8px;">Error loading companies: '+e.message+'</div>';
   }
 })();
 </script>
@@ -864,7 +859,6 @@ function renderCompanyScreen(){
 }
 
 function selectCompany(id){
-  S.companyId=id;
   const co=getCompany(id);
   document.getElementById('login-co-mark').textContent=co.name.charAt(0).toUpperCase();
   document.getElementById('login-co-name').textContent=co.name;
