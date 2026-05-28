@@ -136,6 +136,24 @@ tr:last-child td{border-bottom:none;}
 @media(max-width:480px){.form-row{grid-template-columns:1fr;}.time-display{font-size:30px;}}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+/* KPI MODULE */
+.kpi-score-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+.kpi-score-ring svg{transform:rotate(-90deg);}
+.kpi-score-ring .score-text{position:absolute;text-align:center;font-family:var(--font-mono);font-weight:700;}
+.kpi-cat-bar{height:8px;border-radius:4px;background:var(--bg4);overflow:hidden;margin-top:.3rem;}
+.kpi-cat-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.65rem;}
+.kpi-card:hover{border-color:var(--accent);}
+.kpi-pill{display:inline-flex;align-items:center;gap:4px;padding:.2rem .55rem;border-radius:12px;font-size:11px;font-weight:600;font-family:var(--font-mono);}
+.kpi-pill-exceeds{background:rgba(34,197,94,.15);color:#22c55e;}
+.kpi-pill-meets{background:rgba(0,212,170,.15);color:#00d4aa;}
+.kpi-pill-developing{background:rgba(245,158,11,.15);color:#f59e0b;}
+.kpi-pill-needs{background:rgba(239,68,68,.15);color:#ef4444;}
+.kpi-pill-pending{background:rgba(100,116,139,.15);color:#94a3b8;}
+.appraisal-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.65rem;cursor:pointer;transition:border-color .15s;}
+.appraisal-card:hover{border-color:var(--accent);}
+.progress-bar-wrap{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;flex:1;}
+.progress-bar-fill{height:100%;border-radius:4px;}
 </style>
 </head>
 <body>
@@ -297,6 +315,11 @@ tr:last-child td{border-bottom:none;}
       <div id="guide-content"></div>
     </div>
 
+    <!-- KPI MODULE -->
+    <div id="tab-kpi" class="container" style="display:none;">
+      <div id="kpi-content"></div>
+    </div>
+
   </div><!-- end scroll -->
 
   <nav class="bottom-nav" id="bottom-nav">
@@ -319,6 +342,10 @@ tr:last-child td{border-bottom:none;}
     <div class="nav-item" id="nav-profile" onclick="switchTab('profile')">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profile
+    </div>
+    <div class="nav-item hidden" id="nav-kpi" onclick="switchTab('kpi')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      KPIs
     </div>
     <div class="nav-item" id="nav-guide" onclick="switchTab('guide')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -474,6 +501,155 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- KPI: Category Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-cat">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="kpi-cat-title">KPI Category</div>
+    <div id="kpi-cat-alert" class="alert hidden"></div>
+    <div class="form-group"><label>Category Name <span class="req">*</span></label><input type="text" id="kc-name" placeholder="e.g. Sales Performance"/></div>
+    <div class="form-group"><label>Description</label><input type="text" id="kc-desc" placeholder="Brief description"/></div>
+    <div class="form-group"><label>Weighting (%) <span class="req">*</span></label><input type="number" id="kc-weight" min="1" max="100" placeholder="e.g. 30"/></div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-kpi-cat')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveKpiCat()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI: Definition Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-def">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="kpi-def-title">KPI Definition</div>
+    <div id="kpi-def-alert" class="alert hidden"></div>
+    <div class="form-group"><label>Category <span class="req">*</span></label>
+      <select id="kd-cat"><option value="">Select category</option></select></div>
+    <div class="form-group"><label>KPI Name <span class="req">*</span></label><input type="text" id="kd-name" placeholder="e.g. Revenue Generated"/></div>
+    <div class="form-group"><label>Description</label><input type="text" id="kd-desc" placeholder="What is measured"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Unit <span class="req">*</span></label>
+        <select id="kd-unit">
+          <option value="number">Number</option>
+          <option value="currency">₦ Currency</option>
+          <option value="percent">Percentage (%)</option>
+          <option value="yesno">Yes / No</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Frequency <span class="req">*</span></label>
+        <select id="kd-freq">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-kpi-def')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveKpiDef()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI: Target Assignment Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-target">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Assign KPI Target</div>
+    <div id="kpi-target-alert" class="alert hidden"></div>
+    <div class="form-group"><label>KPI <span class="req">*</span></label>
+      <select id="kt-kpi"><option value="">Select KPI</option></select></div>
+    <div class="form-group"><label>Assign To <span class="req">*</span></label>
+      <select id="kt-assign-type" onchange="renderAssignToOptions()">
+        <option value="staff">Individual Staff</option>
+        <option value="department">Department</option>
+        <option value="role">Job Role</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Select <span class="req">*</span></label>
+      <select id="kt-assign-val"><option value="">Select…</option></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Target Value <span class="req">*</span></label><input type="text" id="kt-target" placeholder="e.g. 500000"/></div>
+      <div class="form-group"><label>Period (YYYY-MM) <span class="req">*</span></label><input type="month" id="kt-period"/></div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-kpi-target')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveKpiTarget()">Assign Target</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI: Self-Appraisal Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-appraisal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Self-Appraisal Submission</div>
+    <div id="kpi-appraisal-alert" class="alert hidden"></div>
+    <div id="appraisal-kpi-info" style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-bottom:.9rem;font-size:13px;"></div>
+    <div class="form-group"><label>Actual Achievement <span class="req">*</span></label>
+      <input type="text" id="ka-actual" placeholder="Enter your actual result"/></div>
+    <div class="form-group"><label>Description of Activities <span class="req">*</span></label>
+      <textarea id="ka-desc" rows="3" placeholder="Describe what you did and how you achieved it…"></textarea></div>
+    <div class="form-group"><label>Supporting Evidence (link or note)</label>
+      <input type="text" id="ka-evidence" placeholder="e.g. Google Drive link, invoice ref, report title"/></div>
+    <div class="form-group"><label>Self-Assessment Score (%) <span class="req">*</span></label>
+      <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100"/></div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="saveAppraisalDraft()">Save Draft</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="submitAppraisal()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI: Manager Review Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-review">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Review & Approve Appraisal</div>
+    <div id="kpi-review-alert" class="alert hidden"></div>
+    <div id="kpi-review-content"></div>
+    <div class="form-group" style="margin-top:.75rem;"><label>Manager Score (%) <span class="req">*</span></label>
+      <input type="number" id="kr-score" min="0" max="100" placeholder="Enter validated score"/></div>
+    <div class="form-group"><label>Feedback / Comments</label>
+      <textarea id="kr-comment" rows="3" placeholder="Add feedback for the staff member…"></textarea></div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-kpi-review')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="approveAppraisal()">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI: Appraisal Detail Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="kpi-detail-content"></div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-kpi-detail')">Close</button>
+  </div>
+</div>
+
+<!-- KPI: Rating Bands Modal -->
+<div class="modal-overlay hidden" id="modal-kpi-bands">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Performance Rating Bands</div>
+    <div id="kpi-bands-alert" class="alert hidden"></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.75rem;">Set the score thresholds for each rating level (scores are %).</div>
+    <div class="form-row">
+      <div class="form-group"><label>Exceeds Expectations ≥</label><input type="number" id="band-exceeds" min="0" max="100"/></div>
+      <div class="form-group"><label>Meets Expectations ≥</label><input type="number" id="band-meets" min="0" max="100"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Developing ≥</label><input type="number" id="band-developing" min="0" max="100"/></div>
+      <div class="form-group"><label>Below = Needs Improvement</label><input type="number" id="band-needs" disabled style="opacity:.5;"/></div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-kpi-bands')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveRatingBands()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ========================================
 //  DATA LAYER
@@ -624,7 +800,7 @@ function loadSession(){
   S.signedIn=!!(S.todayLog&&S.todayLog.signInTime&&!S.todayLog.signOutTime);
   S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
   const isManager=u.systemRole==='manager';
-  ['nav-reports','nav-staff'].forEach(id=>{
+  ['nav-reports','nav-staff','nav-kpi'].forEach(id=>{
     document.getElementById(id).classList.toggle('hidden',!isManager);
   });
   updateDashboard();renderTasks();
@@ -1300,61 +1476,878 @@ function renderGuide(){
 }
 
 // ========================================
-//  USER MENU
+//  KPI DATA LAYER
 // ========================================
-function showUserMenu(){
-  const u=S.user;
-  document.getElementById('user-menu-content').innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.1rem;">
-      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);">${initials(u.name)}</div>
-      <div><div style="font-weight:600;">${esc(u.name)}</div><div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.systemRole)}</div></div>
-    </div>
-    <button class="btn" style="width:100%;justify-content:center;margin-bottom:.5rem;" onclick="closeModal('modal-user-menu');switchTab('profile')">My Profile</button>
-    <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>`;
-  showModal('modal-user-menu');
-}
-function doLogout(){
-  Object.assign(S,{companyId:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null});
-  closeModal('modal-user-menu');
-  document.getElementById('s-name').disabled=false;
-  document.getElementById('s-sys-role').disabled=false;
-  showScreen('company-screen');renderCompanyScreen();
+const getKpiCats=cid=>DB.get('cwx_kpi_cats_'+cid)||[];
+const saveKpiCats=(cid,d)=>DB.set('cwx_kpi_cats_'+cid,d);
+const getKpiDefs=cid=>DB.get('cwx_kpi_defs_'+cid)||[];
+const saveKpiDefs=(cid,d)=>DB.set('cwx_kpi_defs_'+cid,d);
+const getKpiTargets=cid=>DB.get('cwx_kpi_targets_'+cid)||[];
+const saveKpiTargets=(cid,d)=>DB.set('cwx_kpi_targets_'+cid,d);
+const getKpiAppraisals=cid=>DB.get('cwx_kpi_appraisals_'+cid)||[];
+const saveKpiAppraisals=(cid,d)=>DB.set('cwx_kpi_appraisals_'+cid,d);
+const getKpiApprovals=cid=>DB.get('cwx_kpi_approvals_'+cid)||[];
+const saveKpiApprovals=(cid,d)=>DB.set('cwx_kpi_approvals_'+cid,d);
+const getRatingBands=cid=>DB.get('cwx_kpi_bands_'+cid)||{exceeds:90,meets:75,developing:60};
+const saveRatingBandsData=(cid,d)=>DB.set('cwx_kpi_bands_'+cid,d);
+const getAuditTrail=cid=>DB.get('cwx_kpi_audit_'+cid)||[];
+function addAudit(cid,action,detail){
+  const trail=getAuditTrail(cid);
+  trail.unshift({id:'aud_'+Date.now(),action,detail,by:S.user?S.user.name:'System',at:new Date().toISOString()});
+  if(trail.length>200)trail.pop();
+  DB.set('cwx_kpi_audit_'+cid,trail);
 }
 
 // ========================================
-//  TAB NAVIGATION
+//  KPI SCORING ENGINE
 // ========================================
-function switchTab(tab){
-  document.querySelectorAll('.tab-content,[id^=tab-]').forEach(el=>{
-    if(el.id&&el.id.startsWith('tab-'))el.style.display='none';
+function calcKpiScore(actual,target,unit){
+  if(!target||target===0)return 0;
+  if(unit==='yesno')return actual==='yes'?100:0;
+  const raw=(parseFloat(actual)||0)/(parseFloat(target)||1)*100;
+  return Math.min(100,Math.round(raw*10)/10);
+}
+
+function calcOverallScore(staffId,period,cid){
+  const cats=getKpiCats(cid);
+  const defs=getKpiDefs(cid);
+  const targets=getKpiTargets(cid).filter(t=>t.period===period);
+  const approvals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&a.period===period);
+  if(!cats.length||!approvals.length)return null;
+  const totalWeight=cats.reduce((a,c)=>a+(parseFloat(c.weighting)||0),0);
+  if(totalWeight===0)return null;
+  let weightedSum=0;let coveredWeight=0;
+  cats.forEach(cat=>{
+    const catDefs=defs.filter(d=>d.categoryId===cat.id);
+    if(!catDefs.length)return;
+    const catScores=[];
+    catDefs.forEach(def=>{
+      const appr=approvals.find(a=>a.kpiId===def.id);
+      if(appr){catScores.push(parseFloat(appr.managerScore)||0);}
+    });
+    if(catScores.length){
+      const avg=catScores.reduce((a,b)=>a+b,0)/catScores.length;
+      weightedSum+=avg*(parseFloat(cat.weighting)||0);
+      coveredWeight+=parseFloat(cat.weighting)||0;
+    }
   });
-  document.getElementById('tab-'+tab).style.display='block';
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  const ni=document.getElementById('nav-'+tab);if(ni)ni.classList.add('active');
-  S.reportTab=S.reportTab||'daily';
-  if(tab==='staff')renderStaffList();
-  if(tab==='reports'){renderReportContent();document.getElementById('print-btn').style.display='none';}
-  if(tab==='profile')renderProfile();
-  if(tab==='guide')renderGuide();
-  if(tab==='tasks')renderTasks();
+  if(coveredWeight===0)return null;
+  return Math.round(weightedSum/coveredWeight*10)/10;
+}
+
+function getRatingBand(score,cid){
+  const bands=getRatingBands(cid);
+  if(score===null||score===undefined)return{label:'Pending',cls:'kpi-pill-pending'};
+  if(score>=bands.exceeds)return{label:'Exceeds Expectations',cls:'kpi-pill-exceeds'};
+  if(score>=bands.meets)return{label:'Meets Expectations',cls:'kpi-pill-meets'};
+  if(score>=bands.developing)return{label:'Developing',cls:'kpi-pill-developing'};
+  return{label:'Needs Improvement',cls:'kpi-pill-needs'};
+}
+
+function getScoreColor(score){
+  if(score>=90)return'#22c55e';
+  if(score>=75)return'#00d4aa';
+  if(score>=60)return'#f59e0b';
+  return'#ef4444';
+}
+
+function scoreRingSVG(score,size){
+  size=size||60;
+  const r=size/2-6;const circ=2*Math.PI*r;
+  const fill=score?((score/100)*circ):0;
+  const color=score?getScoreColor(score):'#2a3d5c';
+  const fs=size<50?10:13;
+  return `<div class="kpi-score-ring" style="width:${size}px;height:${size}px;">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--bg4)" stroke-width="5"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+        stroke-dasharray="${fill} ${circ}" stroke-linecap="round"/>
+    </svg>
+    <div class="score-text" style="font-size:${fs}px;color:${color};">${score!==null&&score!==undefined?score+'%':'—'}</div>
+  </div>`;
 }
 
 // ========================================
-//  UTILITIES
+//  KPI TAB RENDERER
 // ========================================
-function showModal(id){document.getElementById(id).classList.remove('hidden');}
-function closeModal(id){document.getElementById(id).classList.add('hidden');}
-function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='alert alert-'+type;el.textContent=msg;}
-function hideAlert(id){const el=document.getElementById(id);if(el){el.classList.add('hidden');}}
-function v(id){return(document.getElementById(id)||{}).value||'';}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function initials(n){return String(n||'?').split(' ').slice(0,2).map(w=>w.charAt(0).toUpperCase()).join('');}
-function todayStr(){return new Date().toISOString().split('T')[0];}
-function fmtTime(iso){if(!iso)return'—';return new Date(iso).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});}
-function fmtNum(n){return(+n||0).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:2});}
-function minsToHours(m){const h=Math.floor((m||0)/60);const min=(m||0)%60;return `${h}h ${min}m`;}
-function calcLogVal(l){return(l.tasks||[]).reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);}
-function calcLogMins(l){return(l.tasks||[]).reduce((a,t)=>a+(parseInt(t.duration)||0),0);}
+let kpiSubTab='dashboard';
+let kpiSetupSubTab='categories';
+let editingKpiCatId=null;
+let editingKpiDefId=null;
+let editingKpiTargetId=null;
+let currentAppraisalId=null;
+
+function renderKpiTab(){
+  const isManager=S.user&&S.user.systemRole==='manager';
+  const c=document.getElementById('kpi-content');
+  const period=currentKpiPeriod();
+
+  if(isManager){
+    c.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <div class="page-title" style="margin:0;">KPI <span>Module</span></div>
+        <div style="display:flex;gap:.4rem;">
+          <button class="btn btn-sm" onclick="showKpiBandsModal()">Bands</button>
+          <button class="btn btn-sm btn-primary" onclick="printKpiReport()">Print PDF</button>
+        </div>
+      </div>
+      <div class="tabs" style="flex-wrap:wrap;gap:4px;">
+        <button class="tab ${kpiSubTab==='dashboard'?'active':''}" onclick="kpiSubTab='dashboard';renderKpiTab()">Dashboard</button>
+        <button class="tab ${kpiSubTab==='setup'?'active':''}" onclick="kpiSubTab='setup';renderKpiTab()">Setup</button>
+        <button class="tab ${kpiSubTab==='targets'?'active':''}" onclick="kpiSubTab='targets';renderKpiTab()">Targets</button>
+        <button class="tab ${kpiSubTab==='review'?'active':''}" onclick="kpiSubTab='review';renderKpiTab()">Review</button>
+        <button class="tab ${kpiSubTab==='rankings'?'active':''}" onclick="kpiSubTab='rankings';renderKpiTab()">Rankings</button>
+        <button class="tab ${kpiSubTab==='audit'?'active':''}" onclick="kpiSubTab='audit';renderKpiTab()">Audit Trail</button>
+      </div>
+      <div id="kpi-sub-content"></div>`;
+    renderKpiSubContent();
+  } else {
+    // Staff view
+    c.innerHTML=`
+      <div class="page-title">My <span>KPIs</span></div>
+      <div class="tabs">
+        <button class="tab ${kpiSubTab==='myKpis'?'active':''}" onclick="kpiSubTab='myKpis';renderKpiTab()">My KPIs</button>
+        <button class="tab ${kpiSubTab==='appraise'?'active':''}" onclick="kpiSubTab='appraise';renderKpiTab()">Self-Appraisal</button>
+        <button class="tab ${kpiSubTab==='history'?'active':''}" onclick="kpiSubTab='history';renderKpiTab()">My History</button>
+      </div>
+      <div id="kpi-sub-content"></div>`;
+    renderKpiSubContent();
+  }
+}
+
+function renderKpiSubContent(){
+  const c=document.getElementById('kpi-sub-content');
+  const isManager=S.user&&S.user.systemRole==='manager';
+  const period=currentKpiPeriod();
+  const cid=S.companyId;
+
+  // ---- MANAGER TABS ----
+  if(kpiSubTab==='dashboard'){
+    const staff=getStaff(cid);
+    const approvals=getKpiApprovals(cid).filter(a=>a.period===period);
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.period===period&&a.status==='submitted');
+    const pendingCount=appraisals.filter(a=>!getKpiApprovals(cid).find(ap=>ap.appraisalId===a.id)).length;
+
+    // Team average
+    const scores=staff.map(s=>calcOverallScore(s.id,period,cid)).filter(x=>x!==null);
+    const teamAvg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
+
+    c.innerHTML=`
+      <div style="margin-bottom:1rem;font-size:12px;color:var(--text3);">Period: <strong style="color:var(--text);">${period}</strong>
+        <input type="month" id="kpi-period-filter" value="${period}" onchange="DB.set('cwx_kpi_period',this.value);renderKpiTab();" style="margin-left:.5rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;outline:none;"/>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Team Avg Score</div><div class="stat-val accent">${teamAvg!==null?teamAvg+'%':'—'}</div></div>
+        <div class="stat-card"><div class="stat-label">Pending Reviews</div><div class="stat-val ${pendingCount>0?'':'accent'}">${pendingCount}</div></div>
+        <div class="stat-card"><div class="stat-label">KPI Categories</div><div class="stat-val">${getKpiCats(cid).length}</div></div>
+        <div class="stat-card"><div class="stat-label">KPIs Defined</div><div class="stat-val">${getKpiDefs(cid).length}</div></div>
+      </div>
+      <div class="card" style="margin-bottom:.9rem;">
+        <div class="card-title">Category Weighting</div>
+        ${getKpiCats(cid).map(cat=>`
+          <div style="margin-bottom:.65rem;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:.25rem;">
+              <span>${esc(cat.name)}</span><span style="font-family:var(--font-mono);color:var(--accent);">${cat.weighting}%</span>
+            </div>
+            <div class="kpi-cat-bar"><div class="kpi-cat-bar-fill" style="width:${cat.weighting}%;background:var(--accent);"></div></div>
+          </div>`).join('')||'<p style="color:var(--text3);font-size:13px;">No categories set up yet. Go to Setup tab.</p>'}
+        ${getKpiCats(cid).length?`<div style="font-size:11px;color:var(--text3);margin-top:.5rem;">Total weighting: ${getKpiCats(cid).reduce((a,c)=>a+(parseFloat(c.weighting)||0),0)}%</div>`:''}
+      </div>
+      <div class="card">
+        <div class="card-title">Staff Performance — ${period}</div>
+        ${staff.length?staff.map(s=>{
+          const score=calcOverallScore(s.id,period,cid);
+          const band=getRatingBand(score,cid);
+          const pending=appraisals.filter(a=>a.staffId===s.id&&!getKpiApprovals(cid).find(ap=>ap.appraisalId===a.id)).length;
+          return`<div style="display:flex;align-items:center;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--border);">
+            ${scoreRingSVG(score,48)}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;">${esc(s.name)}</div>
+              <div style="font-size:11px;color:var(--text3);">${esc(s.department||'')} · ${esc(s.role||'')}</div>
+              <span class="kpi-pill ${band.cls}" style="margin-top:3px;">${band.label}</span>
+            </div>
+            ${pending>0?`<span class="badge badge-warn">${pending} pending</span>`:''}
+          </div>`;
+        }).join(''):'<p style="color:var(--text3);font-size:13px;">No staff registered.</p>'}
+      </div>`;
+  }
+
+  else if(kpiSubTab==='setup'){
+    c.innerHTML=`
+      <div class="tabs">
+        <button class="tab ${kpiSetupSubTab==='categories'?'active':''}" onclick="kpiSetupSubTab='categories';renderKpiSubContent()">Categories</button>
+        <button class="tab ${kpiSetupSubTab==='kpis'?'active':''}" onclick="kpiSetupSubTab='kpis';renderKpiSubContent()">KPI Definitions</button>
+      </div>
+      <div id="kpi-setup-sub"></div>`;
+    renderKpiSetupSub();
+  }
+
+  else if(kpiSubTab==='targets'){
+    const defs=getKpiDefs(cid);
+    const targets=getKpiTargets(cid);
+    const staff=getStaff(cid);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;">
+        <div style="font-size:13px;color:var(--text2);">Assign performance targets to staff, departments, or roles.</div>
+        <button class="btn btn-sm btn-primary" onclick="openKpiTargetModal()">+ Assign</button>
+      </div>
+      ${targets.length?`<div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>KPI</th><th>Assigned To</th><th>Target</th><th>Period</th><th></th></tr></thead>
+          <tbody>${targets.map(t=>{
+            const def=defs.find(d=>d.id===t.kpiId);
+            return`<tr>
+              <td><div style="font-weight:500;">${esc(def?def.name:'?')}</div></td>
+              <td style="font-size:12px;">${esc(t.assignType==='staff'?(staff.find(s=>s.id===t.assignVal)||{}).name||t.assignVal:t.assignVal)}<br><span style="color:var(--text3);">${t.assignType}</span></td>
+              <td style="font-family:var(--font-mono);">${esc(t.targetValue)}</td>
+              <td>${esc(t.period)}</td>
+              <td><button class="btn btn-sm btn-danger" onclick="deleteKpiTarget('${t.id}')">✕</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>`:'<p style="color:var(--text3);font-size:13px;">No targets assigned yet.</p>'}`;
+  }
+
+  else if(kpiSubTab==='review'){
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.status==='submitted');
+    const approvals=getKpiApprovals(cid);
+    const staff=getStaff(cid);
+    const defs=getKpiDefs(cid);
+    const pending=appraisals.filter(a=>!approvals.find(ap=>ap.appraisalId===a.id));
+    const done=appraisals.filter(a=>approvals.find(ap=>ap.appraisalId===a.id));
+    c.innerHTML=`
+      ${pending.length?`<div style="margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:.6rem;">Pending Review (${pending.length})</div>
+        ${pending.map(a=>{
+          const def=defs.find(d=>d.id===a.kpiId);
+          const s=staff.find(x=>x.id===a.staffId);
+          return`<div class="appraisal-card" onclick="openKpiReviewModal('${a.id}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="report-avatar">${initials(s?s.name:'?')}</div>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
+                <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · ${a.period}</div>
+              </div>
+              <span class="badge badge-warn">Pending</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:'<div class="alert alert-success" style="margin-bottom:.9rem;">No pending appraisals. All submissions reviewed.</div>'}
+      ${done.length?`<div>
+        <div class="card-title" style="margin-bottom:.6rem;">Approved (${done.length})</div>
+        ${done.map(a=>{
+          const def=defs.find(d=>d.id===a.kpiId);
+          const s=staff.find(x=>x.id===a.staffId);
+          const appr=approvals.find(ap=>ap.appraisalId===a.id);
+          return`<div class="appraisal-card" onclick="showAppraisalDetail('${a.id}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="report-avatar">${initials(s?s.name:'?')}</div>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
+                <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · ${a.period}</div>
+              </div>
+              <div style="text-align:right;">${scoreRingSVG(appr?appr.managerScore:null,44)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:''}`;
+  }
+
+  else if(kpiSubTab==='rankings'){
+    const staff=getStaff(cid);
+    const period=currentKpiPeriod();
+    const ranked=staff.map(s=>{
+      const score=calcOverallScore(s.id,period,cid);
+      return{...s,score};
+    }).filter(s=>s.score!==null).sort((a,b)=>b.score-a.score);
+    const unranked=staff.filter(s=>!ranked.find(r=>r.id===s.id));
+    c.innerHTML=`
+      <div style="margin-bottom:.75rem;font-size:12px;color:var(--text3);">Period: ${period}</div>
+      ${ranked.length?ranked.map((s,i)=>{
+        const band=getRatingBand(s.score,cid);
+        return`<div style="display:flex;align-items:center;gap:12px;padding:.75rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:.5rem;">
+          <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text3);width:24px;text-align:center;">${i+1}</div>
+          ${scoreRingSVG(s.score,52)}
+          <div style="flex:1;">
+            <div style="font-weight:600;">${esc(s.name)}</div>
+            <div style="font-size:11px;color:var(--text3);">${esc(s.department||'')} · ${esc(s.role||'')}</div>
+            <span class="kpi-pill ${band.cls}" style="margin-top:3px;">${band.label}</span>
+          </div>
+        </div>`;
+      }).join(''):''}
+      ${unranked.length?`<div style="margin-top:.75rem;font-size:12px;color:var(--text3);">${unranked.length} staff with no approved appraisals yet.</div>`:''}
+      ${!ranked.length&&!unranked.length?'<p style="color:var(--text3);">No staff data available.</p>':''}`;
+  }
+
+  else if(kpiSubTab==='audit'){
+    const trail=getAuditTrail(cid);
+    c.innerHTML=`
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>Action</th><th>By</th><th>Detail</th><th>Time</th></tr></thead>
+          <tbody>${trail.length?trail.slice(0,50).map(t=>`
+            <tr>
+              <td style="font-weight:500;">${esc(t.action)}</td>
+              <td>${esc(t.by)}</td>
+              <td style="color:var(--text2);font-size:12px;">${esc(t.detail)}</td>
+              <td style="font-size:11px;color:var(--text3);">${fmtTime(t.at)}<br>${(t.at||'').split('T')[0]}</td>
+            </tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3);">No audit entries yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ---- STAFF TABS ----
+  else if(kpiSubTab==='myKpis'){
+    const period=currentKpiPeriod();
+    const targets=getKpiTargets(cid).filter(t=>{
+      const u=S.user;
+      return t.period===period&&(t.assignVal===u.id||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
+    });
+    const defs=getKpiDefs(cid);
+    const cats=getKpiCats(cid);
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
+    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
+    const overallScore=calcOverallScore(S.user.id,period,cid);
+    const band=getRatingBand(overallScore,cid);
+    c.innerHTML=`
+      <div style="margin-bottom:.75rem;font-size:12px;color:var(--text3);">Period: <strong style="color:var(--text);">${period}</strong></div>
+      <div style="display:flex;align-items:center;gap:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        ${scoreRingSVG(overallScore,72)}
+        <div>
+          <div style="font-size:12px;color:var(--text3);">Overall Score</div>
+          <div style="font-size:15px;font-weight:600;">${overallScore!==null?overallScore+'%':'In Progress'}</div>
+          <span class="kpi-pill ${band.cls}">${band.label}</span>
+        </div>
+      </div>
+      ${targets.length?targets.map(t=>{
+        const def=defs.find(d=>d.id===t.kpiId);
+        const cat=def?cats.find(c=>c.id===def.categoryId):null;
+        const appr=appraisals.find(a=>a.kpiId===t.kpiId);
+        const apprv=appr?approvals.find(a=>a.appraisalId===appr.id):null;
+        const score=apprv?apprv.managerScore:null;
+        return`<div class="kpi-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+            <div>
+              <div style="font-weight:600;font-size:13px;">${esc(def?def.name:'?')}</div>
+              <div style="font-size:11px;color:var(--text3);">${esc(cat?cat.name:'')} · ${esc(def?def.frequency:'')} · ${esc(def?def.unit:'')}</div>
+            </div>
+            ${scoreRingSVG(score,44)}
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);">
+            <span>Target: <strong style="color:var(--text);">${esc(t.targetValue)}</strong></span>
+            <span>${apprv?'Approved ✓':appr?'Submitted — awaiting review':'Not submitted'}</span>
+          </div>
+        </div>`;
+      }).join(''):'<p style="color:var(--text3);font-size:13px;">No KPI targets assigned to you for this period.</p>'}`;
+  }
+
+  else if(kpiSubTab==='appraise'){
+    const period=currentKpiPeriod();
+    const targets=getKpiTargets(cid).filter(t=>{
+      const u=S.user;
+      return t.period===period&&(t.assignVal===u.id||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
+    });
+    const defs=getKpiDefs(cid);
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
+    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
+    c.innerHTML=`
+      <div style="font-size:13px;color:var(--text2);margin-bottom:.9rem;">Enter your actual achievements for each KPI. Save as draft or submit for manager review.</div>
+      ${targets.length?targets.map(t=>{
+        const def=defs.find(d=>d.id===t.kpiId);
+        const existing=appraisals.find(a=>a.kpiId===t.kpiId);
+        const approved=existing?approvals.find(a=>a.appraisalId===existing.id):null;
+        return`<div class="kpi-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+            <div style="font-weight:600;font-size:13px;">${esc(def?def.name:'?')}</div>
+            <span class="badge ${approved?'badge-success':existing&&existing.status==='submitted'?'badge-warn':'badge-info'}">${approved?'Approved':existing&&existing.status==='submitted'?'Submitted':existing?'Draft':'Not started'}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:.6rem;">Target: ${esc(t.targetValue)} · ${esc(def?def.unit:'')} · ${esc(t.period)}</div>
+          ${approved?`<div style="font-size:12px;color:var(--success);">✓ Approved. Manager score: ${approved.managerScore}%${approved.comment?'<br>Feedback: '+esc(approved.comment):''}</div>`:
+          `<button class="btn btn-sm ${existing&&existing.status==='submitted'?'':'btn-primary'}" onclick="openAppraisalModal('${t.kpiId}','${t.id}')" ${existing&&existing.status==='submitted'&&!approved?'disabled':''}>
+            ${existing&&existing.status==='submitted'?'Edit (Recall to edit)':existing?'Continue Draft →':'Start Self-Appraisal →'}
+          </button>`}
+        </div>`;
+      }).join(''):'<p style="color:var(--text3);font-size:13px;">No KPI targets assigned to you for this period.</p>'}`;
+  }
+
+  else if(kpiSubTab==='history'){
+    const allPeriods=[...new Set(getKpiApprovals(cid).filter(a=>a.staffId===S.user.id).map(a=>a.period))].sort().reverse();
+    c.innerHTML=allPeriods.length?allPeriods.map(p=>{
+      const score=calcOverallScore(S.user.id,p,cid);
+      const band=getRatingBand(score,cid);
+      const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===p);
+      return`<div class="kpi-card" onclick="showMyPeriodDetail('${p}')">
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${scoreRingSVG(score,52)}
+          <div style="flex:1;">
+            <div style="font-weight:600;">${p}</div>
+            <div style="font-size:12px;color:var(--text3);">${approvals.length} KPI(s) approved</div>
+            <span class="kpi-pill ${band.cls}" style="margin-top:3px;">${band.label}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join(''):'<p style="color:var(--text3);font-size:13px;">No appraisal history yet.</p>';
+  }
+}
+
+function renderKpiSetupSub(){
+  const c=document.getElementById('kpi-setup-sub');
+  if(!c)return;
+  const cid=S.companyId;
+  if(kpiSetupSubTab==='categories'){
+    const cats=getKpiCats(cid);
+    const totalW=cats.reduce((a,c)=>a+(parseFloat(c.weighting)||0),0);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <div style="font-size:12px;color:${totalW>100?'var(--danger)':totalW===100?'var(--success)':'var(--text3)'};">Total weighting: ${totalW}% ${totalW===100?'✓':totalW>100?'⚠ Over 100%':'(should total 100%)'}</div>
+        <button class="btn btn-sm btn-primary" onclick="openKpiCatModal()">+ Category</button>
+      </div>
+      ${cats.length?cats.map(cat=>`
+        <div class="kpi-card" style="cursor:default;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-weight:600;font-size:13px;">${esc(cat.name)}</div>
+              <div style="font-size:12px;color:var(--text3);">${esc(cat.description||'')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--accent);">${cat.weighting}%</span>
+              <button class="btn btn-sm" onclick="openKpiCatModal('${cat.id}')">Edit</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteKpiCat('${cat.id}')">✕</button>
+            </div>
+          </div>
+          <div class="kpi-cat-bar" style="margin-top:.5rem;"><div class="kpi-cat-bar-fill" style="width:${cat.weighting}%;background:var(--accent);"></div></div>
+        </div>`).join(''):'<p style="color:var(--text3);font-size:13px;">No categories yet. Add performance areas like Sales, Operations, Attendance.</p>'}`;
+  } else {
+    const defs=getKpiDefs(cid);
+    const cats=getKpiCats(cid);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.75rem;">
+        <button class="btn btn-sm btn-primary" onclick="openKpiDefModal()">+ KPI</button>
+      </div>
+      ${defs.length?defs.map(d=>{
+        const cat=cats.find(c=>c.id===d.categoryId);
+        return`<div class="kpi-card" style="cursor:default;">
+          <div style="display:flex;align-items:start;justify-content:space-between;">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${esc(d.name)}</div>
+              <div style="font-size:12px;color:var(--text3);">${esc(cat?cat.name:'')} · ${esc(d.unit)} · ${esc(d.frequency)}</div>
+              ${d.description?`<div style="font-size:12px;color:var(--text2);margin-top:.2rem;">${esc(d.description)}</div>`:''}
+            </div>
+            <div style="display:flex;gap:.4rem;flex-shrink:0;">
+              <button class="btn btn-sm" onclick="openKpiDefModal('${d.id}')">Edit</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteKpiDef('${d.id}')">✕</button>
+            </div>
+          </div>
+        </div>`;
+      }).join(''):'<p style="color:var(--text3);font-size:13px;">No KPIs defined yet.</p>'}`;
+  }
+}
+
+// ========================================
+//  KPI CRUD — Categories
+// ========================================
+function openKpiCatModal(id){
+  editingKpiCatId=id||null;
+  document.getElementById('kpi-cat-title').textContent=id?'Edit Category':'New KPI Category';
+  hideAlert('kpi-cat-alert');
+  if(id){
+    const cat=getKpiCats(S.companyId).find(c=>c.id===id);
+    if(cat){document.getElementById('kc-name').value=cat.name;document.getElementById('kc-desc').value=cat.description||'';document.getElementById('kc-weight').value=cat.weighting;}
+  } else {
+    ['kc-name','kc-desc','kc-weight'].forEach(x=>document.getElementById(x).value='');
+  }
+  showModal('modal-kpi-cat');
+}
+function saveKpiCat(){
+  const name=v('kc-name');const weight=parseFloat(v('kc-weight'));
+  if(!name){showAlert('kpi-cat-alert','Name is required.','danger');return;}
+  if(!weight||weight<=0||weight>100){showAlert('kpi-cat-alert','Weighting must be between 1 and 100.','danger');return;}
+  const cats=getKpiCats(S.companyId);
+  if(editingKpiCatId){
+    const idx=cats.findIndex(c=>c.id===editingKpiCatId);
+    if(idx>-1)Object.assign(cats[idx],{name,description:v('kc-desc'),weighting:weight});
+    addAudit(S.companyId,'Category Updated',`${name} weighting: ${weight}%`);
+  } else {
+    cats.push({id:'kcat_'+Date.now(),name,description:v('kc-desc'),weighting:weight,companyId:S.companyId});
+    addAudit(S.companyId,'Category Created',`${name} (${weight}%)`);
+  }
+  saveKpiCats(S.companyId,cats);closeModal('modal-kpi-cat');renderKpiSetupSub();
+}
+function deleteKpiCat(id){
+  if(!confirm('Delete this category? KPIs in this category will also be removed.'))return;
+  const cat=getKpiCats(S.companyId).find(c=>c.id===id);
+  saveKpiCats(S.companyId,getKpiCats(S.companyId).filter(c=>c.id!==id));
+  saveKpiDefs(S.companyId,getKpiDefs(S.companyId).filter(d=>d.categoryId!==id));
+  addAudit(S.companyId,'Category Deleted',cat?cat.name:'');
+  renderKpiSetupSub();
+}
+
+// ========================================
+//  KPI CRUD — Definitions
+// ========================================
+function openKpiDefModal(id){
+  editingKpiDefId=id||null;
+  document.getElementById('kpi-def-title').textContent=id?'Edit KPI':'New KPI Definition';
+  hideAlert('kpi-def-alert');
+  const cats=getKpiCats(S.companyId);
+  document.getElementById('kd-cat').innerHTML='<option value="">Select category</option>'+cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  if(id){
+    const d=getKpiDefs(S.companyId).find(x=>x.id===id);
+    if(d){document.getElementById('kd-cat').value=d.categoryId;document.getElementById('kd-name').value=d.name;document.getElementById('kd-desc').value=d.description||'';document.getElementById('kd-unit').value=d.unit;document.getElementById('kd-freq').value=d.frequency;}
+  } else {
+    ['kd-name','kd-desc'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('kd-unit').value='number';document.getElementById('kd-freq').value='monthly';
+  }
+  showModal('modal-kpi-def');
+}
+function saveKpiDef(){
+  const catId=v('kd-cat');const name=v('kd-name');
+  if(!catId){showAlert('kpi-def-alert','Select a category.','danger');return;}
+  if(!name){showAlert('kpi-def-alert','KPI name is required.','danger');return;}
+  const defs=getKpiDefs(S.companyId);
+  if(editingKpiDefId){
+    const idx=defs.findIndex(d=>d.id===editingKpiDefId);
+    if(idx>-1)Object.assign(defs[idx],{categoryId:catId,name,description:v('kd-desc'),unit:v('kd-unit'),frequency:v('kd-freq')});
+    addAudit(S.companyId,'KPI Updated',name);
+  } else {
+    defs.push({id:'kdef_'+Date.now(),categoryId:catId,name,description:v('kd-desc'),unit:v('kd-unit'),frequency:v('kd-freq'),companyId:S.companyId});
+    addAudit(S.companyId,'KPI Created',name);
+  }
+  saveKpiDefs(S.companyId,defs);closeModal('modal-kpi-def');renderKpiSetupSub();
+}
+function deleteKpiDef(id){
+  if(!confirm('Delete this KPI?'))return;
+  const d=getKpiDefs(S.companyId).find(x=>x.id===id);
+  saveKpiDefs(S.companyId,getKpiDefs(S.companyId).filter(x=>x.id!==id));
+  addAudit(S.companyId,'KPI Deleted',d?d.name:'');
+  renderKpiSetupSub();
+}
+
+// ========================================
+//  KPI CRUD — Targets
+// ========================================
+function openKpiTargetModal(){
+  const defs=getKpiDefs(S.companyId);
+  document.getElementById('kt-kpi').innerHTML='<option value="">Select KPI</option>'+defs.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+  document.getElementById('kt-period').value=currentKpiPeriod();
+  document.getElementById('kt-target').value='';
+  hideAlert('kpi-target-alert');
+  renderAssignToOptions();
+  showModal('modal-kpi-target');
+}
+function renderAssignToOptions(){
+  const type=v('kt-assign-type');
+  const sel=document.getElementById('kt-assign-val');
+  if(type==='staff'){
+    const staff=getStaff(S.companyId);
+    sel.innerHTML='<option value="">Select staff</option>'+staff.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.id})</option>`).join('');
+  } else if(type==='department'){
+    const depts=getDepts(S.companyId);
+    sel.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  } else {
+    const roles=getJobRoles(S.companyId);
+    sel.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+  }
+}
+function saveKpiTarget(){
+  const kpiId=v('kt-kpi');const assignType=v('kt-assign-type');const assignVal=v('kt-assign-val');const target=v('kt-target');const period=v('kt-period');
+  if(!kpiId||!assignVal||!target||!period){showAlert('kpi-target-alert','All fields are required.','danger');return;}
+  const targets=getKpiTargets(S.companyId);
+  targets.push({id:'kt_'+Date.now(),kpiId,assignType,assignVal,targetValue:target,period,assignedBy:S.user.id,assignedAt:new Date().toISOString()});
+  saveKpiTargets(S.companyId,targets);
+  const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
+  addAudit(S.companyId,'Target Assigned',`${def?def.name:'?'} → ${assignVal} (${period}): ${target}`);
+  closeModal('modal-kpi-target');renderKpiSubContent();
+}
+function deleteKpiTarget(id){
+  if(!confirm('Remove this target?'))return;
+  saveKpiTargets(S.companyId,getKpiTargets(S.companyId).filter(t=>t.id!==id));
+  renderKpiSubContent();
+}
+
+// ========================================
+//  SELF-APPRAISAL
+// ========================================
+function openAppraisalModal(kpiId,targetId){
+  const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
+  const target=getKpiTargets(S.companyId).find(t=>t.id===targetId);
+  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===S.user.id&&a.period===currentKpiPeriod());
+  currentAppraisalId=existing?existing.id:null;
+  document.getElementById('appraisal-kpi-info').innerHTML=`
+    <div style="font-weight:600;margin-bottom:.3rem;">${esc(def?def.name:'KPI')}</div>
+    <div style="color:var(--text3);">Target: ${esc(target?target.targetValue:'?')} · Unit: ${esc(def?def.unit:'')} · Period: ${currentKpiPeriod()}</div>`;
+  document.getElementById('ka-actual').value=existing?existing.actualValue||'':'';
+  document.getElementById('ka-desc').value=existing?existing.description||'':'';
+  document.getElementById('ka-evidence').value=existing?existing.evidenceNote||'':'';
+  document.getElementById('ka-selfscore').value=existing?existing.selfScore||'':'';
+  hideAlert('kpi-appraisal-alert');
+  document.getElementById('modal-kpi-appraisal').dataset.kpiId=kpiId;
+  showModal('modal-kpi-appraisal');
+}
+function saveAppraisalDraft(){saveAppraisalData('draft');}
+function submitAppraisal(){saveAppraisalData('submitted');}
+function saveAppraisalData(status){
+  const kpiId=document.getElementById('modal-kpi-appraisal').dataset.kpiId;
+  const actual=v('ka-actual');const desc=v('ka-desc');const selfScore=parseFloat(v('ka-selfscore'));
+  if(!actual){showAlert('kpi-appraisal-alert','Enter your actual achievement.','danger');return;}
+  if(!desc){showAlert('kpi-appraisal-alert','Describe your activities.','danger');return;}
+  if(status==='submitted'&&(isNaN(selfScore)||selfScore<0||selfScore>100)){showAlert('kpi-appraisal-alert','Enter a self-assessment score between 0 and 100.','danger');return;}
+  const appraisals=getKpiAppraisals(S.companyId);
+  if(currentAppraisalId){
+    const idx=appraisals.findIndex(a=>a.id===currentAppraisalId);
+    if(idx>-1)Object.assign(appraisals[idx],{actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),selfScore,status,updatedAt:new Date().toISOString()});
+  } else {
+    const newId='kappr_'+Date.now();
+    appraisals.push({id:newId,staffId:S.user.id,kpiId,period:currentKpiPeriod(),actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),selfScore,status,submittedAt:status==='submitted'?new Date().toISOString():null,createdAt:new Date().toISOString()});
+    currentAppraisalId=newId;
+  }
+  saveKpiAppraisals(S.companyId,appraisals);
+  addAudit(S.companyId,status==='submitted'?'Appraisal Submitted':'Appraisal Saved as Draft',`Staff: ${S.user.name}`);
+  closeModal('modal-kpi-appraisal');renderKpiSubContent();
+}
+
+// ========================================
+//  MANAGER REVIEW & APPROVAL
+// ========================================
+function openKpiReviewModal(appraisalId){
+  const appraisals=getKpiAppraisals(S.companyId);
+  const a=appraisals.find(x=>x.id===appraisalId);if(!a)return;
+  currentAppraisalId=appraisalId;
+  const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
+  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
+  const target=getKpiTargets(S.companyId).find(t=>t.kpiId===a.kpiId&&t.period===a.period);
+  const autoScore=target?calcKpiScore(a.actualValue,target.targetValue,def?def.unit:'number'):null;
+  document.getElementById('kpi-review-content').innerHTML=`
+    <div style="background:var(--bg3);border-radius:10px;padding:.9rem;margin-bottom:.75rem;">
+      <div style="font-weight:600;margin-bottom:.3rem;">${esc(staff?staff.name:a.staffId)} — ${esc(def?def.name:'?')}</div>
+      <div style="font-size:12px;color:var(--text3);">Period: ${a.period} · Target: ${esc(target?target.targetValue:'N/A')}</div>
+      <div style="margin-top:.6rem;font-size:13px;"><strong>Actual:</strong> ${esc(a.actualValue)}</div>
+      <div style="margin-top:.3rem;font-size:13px;"><strong>Activities:</strong> ${esc(a.description)}</div>
+      ${a.evidenceNote?`<div style="margin-top:.3rem;font-size:13px;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
+      <div style="margin-top:.3rem;font-size:13px;">Self-score: <strong>${a.selfScore}%</strong>${autoScore!==null?` · Auto-calculated: <strong>${autoScore}%</strong>`:''}</div>
+    </div>`;
+  document.getElementById('kr-score').value=autoScore||a.selfScore||'';
+  document.getElementById('kr-comment').value='';
+  hideAlert('kpi-review-alert');
+  showModal('modal-kpi-review');
+}
+function approveAppraisal(){
+  const score=parseFloat(v('kr-score'));
+  if(isNaN(score)||score<0||score>100){showAlert('kpi-review-alert','Enter a valid score (0–100).','danger');return;}
+  const a=getKpiAppraisals(S.companyId).find(x=>x.id===currentAppraisalId);if(!a)return;
+  const approvals=getKpiApprovals(S.companyId);
+  approvals.push({id:'kapv_'+Date.now(),appraisalId:currentAppraisalId,staffId:a.staffId,kpiId:a.kpiId,period:a.period,managerScore:score,comment:v('kr-comment'),approvedBy:S.user.id,approvedAt:new Date().toISOString()});
+  saveKpiApprovals(S.companyId,approvals);
+  const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
+  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
+  addAudit(S.companyId,'Appraisal Approved',`${staff?staff.name:a.staffId} — ${def?def.name:'?'}: ${score}%`);
+  closeModal('modal-kpi-review');renderKpiSubContent();
+}
+
+function showAppraisalDetail(appraisalId){
+  const a=getKpiAppraisals(S.companyId).find(x=>x.id===appraisalId);if(!a)return;
+  const appr=getKpiApprovals(S.companyId).find(x=>x.appraisalId===appraisalId);
+  const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
+  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
+  document.getElementById('kpi-detail-content').innerHTML=`
+    <div class="modal-title">${esc(staff?staff.name:a.staffId)} — ${esc(def?def.name:'KPI')}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.9rem;">Period: ${a.period}</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Self Score</div><div class="stat-val">${a.selfScore}%</div></div>
+      <div class="stat-card"><div class="stat-label">Manager Score</div><div class="stat-val accent">${appr?appr.managerScore+'%':'—'}</div></div>
+    </div>
+    <div style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-top:.5rem;font-size:13px;line-height:1.65;">
+      <div><strong>Actual:</strong> ${esc(a.actualValue)}</div>
+      <div style="margin-top:.3rem;"><strong>Activities:</strong> ${esc(a.description)}</div>
+      ${a.evidenceNote?`<div style="margin-top:.3rem;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
+      ${appr&&appr.comment?`<div style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem;color:var(--accent);"><strong>Manager Feedback:</strong> ${esc(appr.comment)}</div>`:''}
+    </div>`;
+  showModal('modal-kpi-detail');
+}
+
+function showMyPeriodDetail(period){
+  const approvals=getKpiApprovals(S.companyId).filter(a=>a.staffId===S.user.id&&a.period===period);
+  const defs=getKpiDefs(S.companyId);
+  const score=calcOverallScore(S.user.id,period,S.companyId);
+  const band=getRatingBand(score,S.companyId);
+  document.getElementById('kpi-detail-content').innerHTML=`
+    <div class="modal-title">Performance — ${period}</div>
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+      ${scoreRingSVG(score,64)}
+      <div><div style="font-size:13px;color:var(--text2);">Overall Score</div>
+      <div style="font-size:18px;font-weight:700;">${score!==null?score+'%':'In Progress'}</div>
+      <span class="kpi-pill ${band.cls}">${band.label}</span></div>
+    </div>
+    ${approvals.map(appr=>{
+      const def=defs.find(d=>d.id===appr.kpiId);
+      return`<div style="background:var(--bg3);border-radius:10px;padding:.75rem;margin-bottom:.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:600;font-size:13px;">${esc(def?def.name:'?')}</div>
+          <span style="font-family:var(--font-mono);color:var(--accent);">${appr.managerScore}%</span>
+        </div>
+        ${appr.comment?`<div style="font-size:12px;color:var(--text2);margin-top:.3rem;">"${esc(appr.comment)}"</div>`:''}
+      </div>`;
+    }).join('')}`;
+  showModal('modal-kpi-detail');
+}
+
+// ========================================
+//  RATING BANDS MODAL
+// ========================================
+function showKpiBandsModal(){
+  const bands=getRatingBands(S.companyId);
+  document.getElementById('band-exceeds').value=bands.exceeds;
+  document.getElementById('band-meets').value=bands.meets;
+  document.getElementById('band-developing').value=bands.developing;
+  document.getElementById('band-needs').value='Below '+bands.developing;
+  hideAlert('kpi-bands-alert');
+  showModal('modal-kpi-bands');
+}
+function saveRatingBands(){
+  const exceeds=parseFloat(v('band-exceeds'));const meets=parseFloat(v('band-meets'));const developing=parseFloat(v('band-developing'));
+  if(exceeds<=meets||meets<=developing){showAlert('kpi-bands-alert','Each band must be lower than the one above it.','danger');return;}
+  saveRatingBandsData(S.companyId,{exceeds,meets,developing});
+  addAudit(S.companyId,'Rating Bands Updated',`≥${exceeds}% Exceeds, ≥${meets}% Meets, ≥${developing}% Developing`);
+  closeModal('modal-kpi-bands');renderKpiTab();
+}
+
+// ========================================
+//  KPI PRINT
+// ========================================
+function printKpiReport(){
+  const period=currentKpiPeriod();
+  const co=getCompany(S.companyId);
+  const staff=getStaff(S.companyId);
+  const cats=getKpiCats(S.companyId);
+  const defs=getKpiDefs(S.companyId);
+  const approvals=getKpiApprovals(S.companyId).filter(a=>a.period===period);
+  const appraisals=getKpiAppraisals(S.companyId).filter(a=>a.period===period);
+
+  const ranked=staff.map(s=>{
+    const score=calcOverallScore(s.id,period,S.companyId);
+    const band=getRatingBand(score,S.companyId);
+    return{...s,score,band};
+  }).sort((a,b)=>(b.score||0)-(a.score||0));
+
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>KPI Report — ${period}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#000;}
+    h1{font-size:20px;margin-bottom:4px;}h2{font-size:14px;color:#444;margin-bottom:4px;}
+    h3{font-size:13px;margin:14px 0 6px;background:#f5f5f5;padding:5px 8px;border-radius:4px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:12px;}
+    th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;}th{background:#f0f0f0;font-weight:700;}
+    .score{font-weight:700;}.exceeds{color:#16a34a;}.meets{color:#0d9488;}.developing{color:#d97706;}.needs{color:#dc2626;}
+    .section{margin-bottom:20px;border:1px solid #ddd;border-radius:6px;padding:12px;}
+    @media print{button{display:none;}}
+  </style></head><body>
+  <h1>CittaWorksX — KPI Performance Report</h1>
+  <h2>${co?co.name:''} · Period: ${period}</h2>
+  <p style="font-size:11px;color:#666;margin-bottom:16px;">Generated: ${new Date().toLocaleString('en-NG')}</p>
+  <button onclick="window.print()" style="margin-bottom:16px;padding:6px 16px;background:#00d4aa;border:none;border-radius:4px;cursor:pointer;">🖨 Print / Save PDF</button>
+
+  <div class="section">
+    <h3>Performance Rankings</h3>
+    <table><thead><tr><th>#</th><th>Name</th><th>Department</th><th>Score</th><th>Rating</th></tr></thead>
+    <tbody>${ranked.map((s,i)=>`<tr>
+      <td>${i+1}</td><td>${s.name}</td><td>${s.department||'—'}</td>
+      <td class="score ${s.score>=90?'exceeds':s.score>=75?'meets':s.score>=60?'developing':s.score!==null?'needs':''}">${s.score!==null?s.score+'%':'—'}</td>
+      <td>${s.band.label}</td></tr>`).join('')}
+    </tbody></table>
+  </div>
+
+  <div class="section">
+    <h3>Detailed Appraisals</h3>
+    ${ranked.filter(s=>s.score!==null).map(s=>`
+      <div style="margin-bottom:12px;">
+        <strong>${s.name}</strong> — Score: ${s.score!==null?s.score+'%':'—'} · ${s.band.label}<br>
+        <table style="margin-top:4px;"><thead><tr><th>KPI</th><th>Category</th><th>Self</th><th>Manager</th><th>Feedback</th></tr></thead>
+        <tbody>${approvals.filter(a=>a.staffId===s.id).map(appr=>{
+          const def=defs.find(d=>d.id===appr.kpiId);const cat=def?cats.find(c=>c.id===def.categoryId):null;
+          const selfAppr=appraisals.find(a=>a.kpiId===appr.kpiId&&a.staffId===s.id);
+          return`<tr><td>${def?def.name:'?'}</td><td>${cat?cat.name:'?'}</td>
+            <td>${selfAppr?selfAppr.selfScore+'%':'—'}</td>
+            <td class="score">${appr.managerScore}%</td>
+            <td style="font-size:11px;">${appr.comment||'—'}</td></tr>`;
+        }).join('')}
+        </tbody></table>
+      </div>`).join('')}
+  </div>
+  </body></html>`);
+  w.document.close();
+}
+
+// ========================================
+//  KPI PERIOD HELPER
+// ========================================
+function currentKpiPeriod(){
+  const saved=DB.get('cwx_kpi_period');
+  if(saved)return saved;
+  const n=new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+}
+
+// ========================================
+//  UPDATED GUIDE (with KPI section)
+// ========================================
+function renderGuide(){
+  document.getElementById('guide-content').innerHTML=`
+    <div class="guide-section">
+      <h3>🏢 Getting Started</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Your company must be registered in the <strong>Admin Portal</strong> (admin.html) by a system administrator before you can log in.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">On the home screen, <strong>select your company</strong>, then enter your <strong>Staff ID</strong> and <strong>Password</strong> to sign in.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>⏰ Daily Sign-In</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Open the app and tap <strong>Sign In</strong> on the Dashboard tab. Your precise location is captured automatically.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Allow location access when prompted — this is required for accurate attendance records.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>✅ Adding Tasks</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Go to the <strong>Tasks</strong> tab and tap <strong>+ Add Task</strong>.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Each task requires: <strong>Description</strong>, <strong>Duration</strong> (minutes), and <strong>Value Added</strong> (₦ amount).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tasks <strong>auto-save</strong> as you type. Close the app and return later — your work is preserved.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>📋 Review & Sign Out</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Tap <strong>Review & Submit Tasks</strong> at the bottom of the Tasks tab when done for the day.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Verify all tasks, then tap <strong>Submit & Sign Out</strong>. Sign-out location is captured automatically.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Important:</strong> You cannot sign out without at least one completed, described task with a value.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>🎯 KPI Module — Staff Guide</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>My KPIs tab:</strong> View all KPI targets your manager has assigned to you for the current period, your overall performance score, and your rating band (Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement).</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Self-Appraisal tab:</strong> For each assigned KPI, tap <strong>Start Self-Appraisal</strong> to enter your actual achievement, describe your activities, attach a link or evidence note, and enter your self-assessment score (0–100%). Save as Draft at any time and return later.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Submitting:</strong> Once you are satisfied with your entries, tap <strong>Submit</strong>. Submitted appraisals are sent to your manager for review. You cannot edit after submission unless your manager recalls it.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>My History tab:</strong> View all your past appraisal results by period, including manager scores, feedback comments, and your overall performance rating for each period.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>🎯 KPI Module — Manager Guide</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Setup — Categories:</strong> Create performance areas (e.g. Sales, Operations, Attendance) and assign a weighting percentage to each. All category weightings must add up to 100%.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup — KPI Definitions:</strong> For each category, define measurable KPIs with a name, unit (₦, %, number, or yes/no), and frequency (daily, weekly, monthly).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Targets:</strong> Assign each KPI to individual staff members, entire departments, or job roles, with a specific target value and period (month). This is what staff will be measured against.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Review tab:</strong> When staff submit self-appraisals, they appear here as Pending. Open each one, review the actual achievement and evidence, adjust the score if needed, add feedback, and tap <strong>Approve</strong>. The system automatically calculates the weighted overall score once all KPIs are approved.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Rankings tab:</strong> See all staff ranked by their overall performance score for the selected period, with rating bands displayed.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Performance Bands:</strong> Tap the <strong>Bands</strong> button to customise the score thresholds for each rating label (default: ≥90% Exceeds, ≥75% Meets, ≥60% Developing, below 60% Needs Improvement).</div></div>
+      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Print PDF:</strong> Tap <strong>Print PDF</strong> to generate a full printable KPI report showing rankings, individual scores, and manager feedback for the selected period.</div></div>
+      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Audit Trail:</strong> Every KPI action — creation, target assignment, submission, approval — is logged with timestamp and responsible user. Access via the Audit Trail tab.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>👔 Other Manager Features</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Reports tab:</strong> View daily attendance logs, staff summaries, and detailed activity reports. Filter by date and department. Print to PDF.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Staff tab:</strong> Register new staff, manage departments and job roles, assign Manager role.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Company Profile:</strong> Edit company details via Profile tab → Edit Company Profile.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>📱 Installing as an App</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Android:</strong> Open in Chrome → tap ⋮ menu → <em>Add to Home screen</em>.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>iPhone:</strong> Open in Safari → tap Share icon → <em>Add to Home Screen</em>.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">The app works <strong>offline</strong> — all data saves locally and syncs when you reconnect.</div></div>
+    </div>
+    <div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:10px;padding:1rem;font-size:13px;color:var(--text2);line-height:1.7;">
+      <strong style="color:var(--accent);">Need help?</strong> Contact your manager or the system administrator at your company.
+    </div>`;
+}
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');});});
