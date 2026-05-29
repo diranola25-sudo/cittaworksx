@@ -190,20 +190,32 @@ tr:last-child td{border-bottom:none;}
   Offline — changes will sync when reconnected
 </div>
 
-<!-- ========== COMPANY SELECT ========== -->
+<!-- ========== COMPANY CODE ENTRY ========== -->
 <div id="company-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--bg);">
-  <div style="width:100%;max-width:440px;">
+  <div style="width:100%;max-width:400px;">
     <div style="text-align:center;margin-bottom:2rem;">
       <div style="width:68px;height:68px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:30px;color:#0a0f1e;margin:0 auto 12px;">C</div>
       <h1 style="font-family:var(--font-mono);font-size:24px;font-weight:700;">Citta<span style="color:var(--accent);">Works</span>X</h1>
-      <p style="color:var(--text3);font-size:13px;margin-top:5px;">Select your company workspace</p>
+      <p style="color:var(--text3);font-size:13px;margin-top:5px;">Staff Portal</p>
     </div>
-    <div id="company-list" style="margin-bottom:1rem;min-height:60px;"></div>
-    <div style="text-align:center;margin-top:.75rem;">
-      <button class="btn btn-sm" id="refresh-btn" style="font-size:12px;">↻ Refresh</button>
-    </div>
-    <div style="text-align:center;margin-top:.75rem;">
-      <button class="theme-toggle" onclick="toggleTheme()"></button>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:2rem;">
+      <div id="co-code-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label style="font-size:13px;font-weight:500;color:var(--text2);">Company Code</label>
+        <input type="text" id="co-code-input" placeholder="Enter your company code" autocomplete="off"
+          style="text-transform:uppercase;letter-spacing:2px;font-family:var(--font-mono);font-size:18px;text-align:center;"
+          oninput="this.value=this.value.toUpperCase();clearCoCodeResult()"
+          onkeydown="if(event.key==='Enter')lookupCompanyCode()"/>
+      </div>
+      <!-- Company name preview shown after valid code -->
+      <div id="co-code-result" style="display:none;background:var(--bg3);border:1.5px solid var(--accent);border-radius:10px;padding:.85rem 1rem;margin-bottom:.9rem;display:none;align-items:center;gap:10px;">
+        <div id="co-code-mark" style="width:38px;height:38px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:#0a0f1e;flex-shrink:0;">C</div>
+        <div><div id="co-code-name" style="font-weight:600;font-size:15px;"></div><div id="co-code-sub" style="font-size:12px;color:var(--text3);"></div></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="lookupCompanyCode()">Continue →</button>
+      <div style="text-align:center;margin-top:1rem;">
+        <button class="theme-toggle" onclick="toggleTheme()"></button>
+      </div>
     </div>
   </div>
 </div>
@@ -223,7 +235,7 @@ tr:last-child td{border-bottom:none;}
       <div class="form-group"><label>Password</label><input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="doLogin()">Sign In</button>
       <div style="text-align:center;margin-top:1rem;">
-        <button class="btn btn-sm" onclick="showScreen('company-screen');renderCompanyScreen()">← Back</button>
+        <button class="btn btn-sm" onclick="showScreen('company-screen')">← Back</button>
         <button class="theme-toggle" onclick="toggleTheme()" style="margin-left:10px;vertical-align:middle;"></button>
       </div>
     </div>
@@ -874,7 +886,9 @@ window.addEventListener('load',async()=>{
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
   updateClock();
   showScreen('company-screen');
-  await renderCompanyScreen();
+  document.getElementById('co-code-input').value='';
+  clearCoCodeResult();
+  hideAlert('co-code-alert');
   var rb=document.getElementById('refresh-btn');
   if(rb)rb.onclick=async()=>{showScreen('company-screen');await renderCompanyScreen();};
   captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
@@ -936,82 +950,65 @@ function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorag
 // ========================================
 //  COMPANY SELECT — Firebase
 // ========================================
+// Company screen now shows a code entry box — no company list
 async function renderCompanyScreen(){
   hideLoading();
-  const list=document.getElementById('company-list');
-  if(!list)return;
-  if(!_firebaseReady){
-    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:1.25rem;font-size:13px;"><div style="font-weight:700;color:#ef4444;margin-bottom:.5rem;">Firebase Setup Required</div><div style="color:var(--text2);">Config not set. Upload the correctly configured index.html to GitHub.</div></div>';
-    return;
-  }
-  list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies...</p>';
-  try{
-    const companies=await getCompaniesAsync();
-    hideLoading();
-    if(!companies.length){
-      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.</div>';
-      return;
-    }
-    window._cwxCompanies=companies;
-    // Build HTML — pure divs, no anchors, no buttons
-    // onclick is set as a string attribute calling a global window function directly
-    var html='';
-    for(var i=0;i<companies.length;i++){
-      var co=companies[i];
-      var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      var bg=co.color||'rgba(0,212,170,.15)';
-      var tc=co.textColor||'#00d4aa';
-      var l=(co.name||'?').charAt(0).toUpperCase();
-      html+='<div role="button" tabindex="0" id="cwx-co-'+i+'" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin-bottom:.55rem;cursor:pointer;user-select:none;-webkit-user-select:none;">'
-           +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
-           +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
-           +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;pointer-events:none;"><path d="M9 18l6-6-6-6"/></svg>'
-           +'</div>';
-    }
-    list.innerHTML=html;
-    // Attach events AFTER innerHTML — both click and touchend for max compatibility
-    for(var j=0;j<companies.length;j++){
-      (function(idx){
-        var el=document.getElementById('cwx-co-'+idx);
-        if(!el)return;
-        var handler=function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          _cwxPickCompany(idx);
-        };
-        el.addEventListener('click',handler,false);
-        el.addEventListener('touchend',handler,{passive:false});
-        el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' ')handler(e);});
-      })(j);
-    }
-  }catch(e){
-    hideLoading();
-    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;font-size:13px;color:#ef4444;text-align:center;">Connection error: '+esc(e.message)+'</div>';
-  }
+  showScreen('company-screen');
+  document.getElementById('co-code-input').value='';
+  clearCoCodeResult();
+  hideAlert('co-code-alert');
 }
 
-function _cwxPickCompany(idx){
-  var companies=window._cwxCompanies||[];
-  var co=companies[idx];
-  if(!co){
-    alert('Company data missing. Tap Refresh and try again.');
-    return;
-  }
-  selectCompany(co.id,co);
+function clearCoCodeResult(){
+  const r=document.getElementById('co-code-result');
+  if(r)r.style.display='none';
+  S.companyId=null;S.company=null;
+}
+
+async function lookupCompanyCode(){
+  const code=document.getElementById('co-code-input').value.trim().toUpperCase();
+  if(!code){showAlert('co-code-alert','Enter your company code.','danger');return;}
+  hideAlert('co-code-alert');
+  showLoading('Looking up company…');
+  try{
+    const snap=await _db.collection('companies').where('code','==',code).limit(1).get();
+    hideLoading();
+    if(snap.empty){showAlert('co-code-alert','Invalid company code. Please check with your administrator.','danger');return;}
+    const co={id:snap.docs[0].id,...snap.docs[0].data()};
+    if(co.status==='inactive'){showAlert('co-code-alert','This company is currently inactive. Contact your administrator.','warn');return;}
+    // Show company name preview
+    const result=document.getElementById('co-code-result');
+    const mark=document.getElementById('co-code-mark');
+    const name=document.getElementById('co-code-name');
+    const sub=document.getElementById('co-code-sub');
+    if(mark){mark.textContent=(co.name||'C').charAt(0).toUpperCase();mark.style.background=co.color||'var(--accent)';mark.style.color=co.textColor||'#0a0f1e';}
+    if(name)name.textContent=co.name||'';
+    if(sub)sub.textContent=(co.industry||'')+(co.country?' · '+co.country:'');
+    if(result)result.style.display='flex';
+    // Move to login after brief preview
+    S.companyId=co.id;S.company=co;
+    setTimeout(()=>{
+      const markEl=document.getElementById('login-co-mark');
+      const nameEl=document.getElementById('login-co-name');
+      if(markEl){markEl.textContent=(co.name||'C').charAt(0).toUpperCase();markEl.style.background=co.color||'var(--accent)';}
+      if(nameEl)nameEl.textContent=co.name||'';
+      document.getElementById('login-id').value='';
+      document.getElementById('login-pw').value='';
+      hideAlert('login-alert');
+      showScreen('login-screen');
+    },800);
+  }catch(e){hideLoading();showAlert('co-code-alert','Error: '+esc(e.message),'danger');}
 }
 
 function selectCompany(id,co){
   if(!id||!co){console.error('selectCompany: missing id or co');return;}
   S.companyId=id;S.company=co;
-  var markEl=document.getElementById('login-co-mark');
-  var nameEl=document.getElementById('login-co-name');
-  var idEl=document.getElementById('login-id');
-  var pwEl=document.getElementById('login-pw');
+  const markEl=document.getElementById('login-co-mark');
+  const nameEl=document.getElementById('login-co-name');
   if(markEl)markEl.textContent=(co.name||'C').charAt(0).toUpperCase();
   if(nameEl)nameEl.textContent=co.name||'CittaWorksX';
-  if(idEl)idEl.value='';
-  if(pwEl)pwEl.value='';
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pw').value='';
   hideAlert('login-alert');
   showScreen('login-screen');
 }
@@ -1761,6 +1758,20 @@ function renderGuide(){
 // In-memory KPI cache (loaded on tab open)
 let _kpiCache={cats:[],defs:[],targets:[],appraisals:[],approvals:[],bands:{exceeds:90,meets:75,developing:60}};
 
+// Period helpers
+function currentKpiPeriod(){
+  const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+}
+function currentKpiYear(){return new Date().getFullYear();}
+function periodYear(period){return period?parseInt(period.split('-')[0]):currentKpiYear();}
+function allPeriodsForYear(year){
+  const now=new Date();const y=year||currentKpiYear();
+  const end=y===now.getFullYear()?now.getMonth()+1:12;
+  const periods=[];
+  for(let m=1;m<=end;m++)periods.push(y+'-'+String(m).padStart(2,'0'));
+  return periods;
+}
+
 async function loadKpiCache(cid){
   const result=await getKpiDataAsync(cid);
   _kpiCache=result;
@@ -1803,7 +1814,7 @@ function calcOverallScore(staffId,period,cid){
   const cats=getKpiCats(cid);
   const defs=getKpiDefs(cid);
   const targets=getKpiTargets(cid);
-  const approvals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&a.period===period);
+  const approvals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&(period?a.period===period:true));
   if(!cats.length||!approvals.length)return null;
   const totalWeight=cats.reduce((a,c)=>a+(parseFloat(c.weighting)||0),0);
   if(totalWeight===0)return null;
@@ -2000,47 +2011,75 @@ function renderKpiSubContent(){
   }
 
   else if(kpiSubTab==='review'){
-    const appraisals=getKpiAppraisals(cid).filter(a=>a.status==='submitted');
+    const period=currentKpiPeriod();
+    const appraisals=getKpiAppraisals(cid);
     const approvals=getKpiApprovals(cid);
-    const staff=getStaff(cid);
+    const staffList=S._staff||[];
     const defs=getKpiDefs(cid);
-    const pending=appraisals.filter(a=>!approvals.find(ap=>ap.appraisalId===a.id));
-    const done=appraisals.filter(a=>approvals.find(ap=>ap.appraisalId===a.id));
+    const targets=getKpiTargets(cid).filter(t=>t.period===period);
+    const pending=appraisals.filter(a=>a.period===period&&a.status==='submitted'&&!approvals.find(ap=>ap.appraisalId===a.id));
+    const done=appraisals.filter(a=>a.period===period&&approvals.find(ap=>ap.appraisalId===a.id));
+    // Staff with targets but no submission
+    const submittedIds=new Set(appraisals.filter(a=>a.period===period).map(a=>a.staffId));
+    const awaitingMap={};
+    targets.forEach(t=>{
+      let staffIds=[];
+      if(t.assignType==='staff')staffIds=[t.assignVal];
+      else if(t.assignType==='department')staffIds=staffList.filter(s=>s.department===t.assignVal).map(s=>s.staffId||s.id);
+      else staffIds=staffList.filter(s=>s.role===t.assignVal).map(s=>s.staffId||s.id);
+      staffIds.forEach(sid=>{
+        if(!submittedIds.has(sid)){
+          if(!awaitingMap[sid]){const sm=staffList.find(s=>(s.staffId||s.id)===sid);awaitingMap[sid]={name:sm?sm.name||sm.email:sid,kpis:[]};}
+          const def=defs.find(d=>d.id===t.kpiId);
+          if(def&&!awaitingMap[sid].kpis.includes(def.name))awaitingMap[sid].kpis.push(def.name);
+        }
+      });
+    });
+    const awaiting=Object.values(awaitingMap);
     c.innerHTML=`
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Current Period: <strong style="color:var(--accent);">${period}</strong></div>
       ${pending.length?`<div style="margin-bottom:1rem;">
         <div class="card-title" style="margin-bottom:.6rem;">Pending Review (${pending.length})</div>
         ${pending.map(a=>{
           const def=defs.find(d=>d.id===a.kpiId);
-          const s=staff.find(x=>x.id===a.staffId);
+          const s=staffList.find(x=>(x.staffId||x.id)===a.staffId);
           return`<div class="appraisal-card" onclick="openKpiReviewModal('${a.id}')">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="report-avatar">${initials(s?s.name:'?')}</div>
+              <div class="report-avatar">${initials(s?s.name:a.staffId)}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
-                <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · ${a.period}</div>
+                <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · Self-score: ${a.selfScore!=null?a.selfScore+'%':'—'}</div>
               </div>
               <span class="badge badge-warn">Pending</span>
             </div>
           </div>`;
         }).join('')}
-      </div>`:'<div class="alert alert-success" style="margin-bottom:.9rem;">No pending appraisals. All submissions reviewed.</div>'}
-      ${done.length?`<div>
-        <div class="card-title" style="margin-bottom:.6rem;">Approved (${done.length})</div>
+      </div>`:'<div class="alert alert-success" style="margin-bottom:.75rem;">No pending appraisals. All submissions reviewed.</div>'}
+      ${done.length?`<div style="margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:.6rem;">Approved This Period (${done.length})</div>
         ${done.map(a=>{
           const def=defs.find(d=>d.id===a.kpiId);
-          const s=staff.find(x=>x.id===a.staffId);
+          const s=staffList.find(x=>(x.staffId||x.id)===a.staffId);
           const appr=approvals.find(ap=>ap.appraisalId===a.id);
           return`<div class="appraisal-card" onclick="showAppraisalDetail('${a.id}')">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="report-avatar">${initials(s?s.name:'?')}</div>
-              <div style="flex:1;">
-                <div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
-                <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · ${a.period}</div>
-              </div>
+              <div class="report-avatar">${initials(s?s.name:a.staffId)}</div>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
+              <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')}</div></div>
               <div style="text-align:right;">${scoreRingSVG(appr?appr.managerScore:null,44)}</div>
             </div>
           </div>`;
         }).join('')}
+      </div>`:''}
+      ${awaiting.length?`<div>
+        <div class="card-title" style="margin-bottom:.6rem;">Awaiting Staff Submission (${awaiting.length})</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:.6rem;">These staff have assigned targets but have not yet submitted their appraisals.</div>
+        ${awaiting.map(ns=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;">
+          <div class="report-avatar">${initials(ns.name)}</div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${esc(ns.name)}</div>
+          <div style="font-size:11px;color:var(--text3);">${ns.kpis.slice(0,3).map(k=>esc(k)).join(', ')}${ns.kpis.length>3?' +'+( ns.kpis.length-3)+' more':''}</div></div>
+          <span class="badge badge-info">Not submitted</span>
+        </div>`).join('')}
       </div>`:''}`;
   }
 
@@ -2250,28 +2289,35 @@ function openKpiCatModal(id){
   }
   showModal('modal-kpi-cat');
 }
-function saveKpiCat(){
+async function saveKpiCat(){
   const name=v('kc-name');const weight=parseFloat(v('kc-weight'));
   if(!name){showAlert('kpi-cat-alert','Name is required.','danger');return;}
   if(!weight||weight<=0||weight>100){showAlert('kpi-cat-alert','Weighting must be between 1 and 100.','danger');return;}
-  const cats=getKpiCats(S.companyId);
-  if(editingKpiCatId){
-    const idx=cats.findIndex(c=>c.id===editingKpiCatId);
-    if(idx>-1)Object.assign(cats[idx],{name,description:v('kc-desc'),weighting:weight});
-    addAudit(S.companyId,'Category Updated',`${name} weighting: ${weight}%`);
-  } else {
-    cats.push({id:'kcat_'+Date.now(),name,description:v('kc-desc'),weighting:weight,companyId:S.companyId});
-    addAudit(S.companyId,'Category Created',`${name} (${weight}%)`);
-  }
-  saveKpiCats(S.companyId,cats);closeModal('modal-kpi-cat');renderKpiSetupSub();
+  showLoading('Saving…');
+  try{
+    const data={name,description:v('kc-desc'),weighting:weight,companyId:S.companyId,updatedAt:new Date().toISOString()};
+    if(editingKpiCatId){
+      await _cc(S.companyId,'kpiCategories').doc(editingKpiCatId).update(data);
+    } else {
+      await _cc(S.companyId,'kpiCategories').add({...data,createdAt:new Date().toISOString()});
+    }
+    await addAudit(S.companyId,editingKpiCatId?'Category Updated':'Category Created',`${name} (${weight}%)`);
+    hideLoading();closeModal('modal-kpi-cat');await renderKpiTab();
+  }catch(e){hideLoading();showAlert('kpi-cat-alert','Error saving: '+e.message,'danger');}
 }
-function deleteKpiCat(id){
-  if(!confirm('Delete this category? KPIs in this category will also be removed.'))return;
-  const cat=getKpiCats(S.companyId).find(c=>c.id===id);
-  saveKpiCats(S.companyId,getKpiCats(S.companyId).filter(c=>c.id!==id));
-  saveKpiDefs(S.companyId,getKpiDefs(S.companyId).filter(d=>d.categoryId!==id));
-  addAudit(S.companyId,'Category Deleted',cat?cat.name:'');
-  renderKpiSetupSub();
+async function deleteKpiCat(id){
+  if(!confirm('Delete this category? All KPIs in this category will also be removed.'))return;
+  showLoading('Deleting…');
+  try{
+    // Delete all defs in this category first
+    const defs=await _cc(S.companyId,'kpiDefinitions').where('categoryId','==',id).get();
+    const batch=_db.batch();
+    defs.docs.forEach(d=>batch.delete(d.ref));
+    if(defs.size>0)await batch.commit();
+    await _cc(S.companyId,'kpiCategories').doc(id).delete();
+    await addAudit(S.companyId,'Category Deleted',id);
+    hideLoading();await renderKpiTab();
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
 // ========================================
@@ -2292,27 +2338,30 @@ function openKpiDefModal(id){
   }
   showModal('modal-kpi-def');
 }
-function saveKpiDef(){
+async function saveKpiDef(){
   const catId=v('kd-cat');const name=v('kd-name');
   if(!catId){showAlert('kpi-def-alert','Select a category.','danger');return;}
   if(!name){showAlert('kpi-def-alert','KPI name is required.','danger');return;}
-  const defs=getKpiDefs(S.companyId);
-  if(editingKpiDefId){
-    const idx=defs.findIndex(d=>d.id===editingKpiDefId);
-    if(idx>-1)Object.assign(defs[idx],{categoryId:catId,name,description:v('kd-desc'),unit:v('kd-unit'),frequency:v('kd-freq')});
-    addAudit(S.companyId,'KPI Updated',name);
-  } else {
-    defs.push({id:'kdef_'+Date.now(),categoryId:catId,name,description:v('kd-desc'),unit:v('kd-unit'),frequency:v('kd-freq'),companyId:S.companyId});
-    addAudit(S.companyId,'KPI Created',name);
-  }
-  saveKpiDefs(S.companyId,defs);closeModal('modal-kpi-def');renderKpiSetupSub();
+  showLoading('Saving…');
+  try{
+    const data={categoryId:catId,name,description:v('kd-desc'),unit:v('kd-unit'),frequency:v('kd-freq'),companyId:S.companyId,updatedAt:new Date().toISOString()};
+    if(editingKpiDefId){
+      await _cc(S.companyId,'kpiDefinitions').doc(editingKpiDefId).update(data);
+    } else {
+      await _cc(S.companyId,'kpiDefinitions').add({...data,createdAt:new Date().toISOString()});
+    }
+    await addAudit(S.companyId,editingKpiDefId?'KPI Updated':'KPI Created',name);
+    hideLoading();closeModal('modal-kpi-def');await renderKpiTab();
+  }catch(e){hideLoading();showAlert('kpi-def-alert','Error saving: '+e.message,'danger');}
 }
-function deleteKpiDef(id){
-  if(!confirm('Delete this KPI?'))return;
-  const d=getKpiDefs(S.companyId).find(x=>x.id===id);
-  saveKpiDefs(S.companyId,getKpiDefs(S.companyId).filter(x=>x.id!==id));
-  addAudit(S.companyId,'KPI Deleted',d?d.name:'');
-  renderKpiSetupSub();
+async function deleteKpiDef(id){
+  if(!confirm('Delete this KPI definition?'))return;
+  showLoading('Deleting…');
+  try{
+    await _cc(S.companyId,'kpiDefinitions').doc(id).delete();
+    await addAudit(S.companyId,'KPI Deleted',id);
+    hideLoading();await renderKpiTab();
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
 // ========================================
@@ -2331,30 +2380,32 @@ function renderAssignToOptions(){
   const type=v('kt-assign-type');
   const sel=document.getElementById('kt-assign-val');
   if(type==='staff'){
-    const staff=getStaff(S.companyId);
-    sel.innerHTML='<option value="">Select staff</option>'+staff.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.id})</option>`).join('');
+    sel.innerHTML='<option value="">Select staff</option>'+(S._staff||[]).map(s=>`<option value="${s.staffId||s.id}">${esc(s.name||s.email)}</option>`).join('');
   } else if(type==='department'){
-    const depts=getDepts(S.companyId);
-    sel.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+    sel.innerHTML='<option value="">Select department</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
   } else {
-    const roles=getJobRoles(S.companyId);
-    sel.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+    sel.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
   }
 }
-function saveKpiTarget(){
+async function saveKpiTarget(){
   const kpiId=v('kt-kpi');const assignType=v('kt-assign-type');const assignVal=v('kt-assign-val');const target=v('kt-target');const period=v('kt-period');
   if(!kpiId||!assignVal||!target||!period){showAlert('kpi-target-alert','All fields are required.','danger');return;}
-  const targets=getKpiTargets(S.companyId);
-  targets.push({id:'kt_'+Date.now(),kpiId,assignType,assignVal,targetValue:target,period,assignedBy:S.user.id,assignedAt:new Date().toISOString()});
-  saveKpiTargets(S.companyId,targets);
-  const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
-  addAudit(S.companyId,'Target Assigned',`${def?def.name:'?'} → ${assignVal} (${period}): ${target}`);
-  closeModal('modal-kpi-target');renderKpiSubContent();
+  showLoading('Saving…');
+  try{
+    await _cc(S.companyId,'kpiTargets').add({kpiId,assignType,assignVal,targetValue:target,period,assignedBy:S.user.staffId||S.user.id,assignedAt:new Date().toISOString(),companyId:S.companyId});
+    const cats=getKpiCats(S.companyId);const defs=getKpiDefs(S.companyId);
+    const def=defs.find(d=>d.id===kpiId);
+    await addAudit(S.companyId,'Target Assigned',`${def?def.name:'?'} → ${assignVal} (${period}): ${target}`);
+    hideLoading();closeModal('modal-kpi-target');await renderKpiTab();
+  }catch(e){hideLoading();showAlert('kpi-target-alert','Error saving: '+e.message,'danger');}
 }
-function deleteKpiTarget(id){
+async function deleteKpiTarget(id){
   if(!confirm('Remove this target?'))return;
-  saveKpiTargets(S.companyId,getKpiTargets(S.companyId).filter(t=>t.id!==id));
-  renderKpiSubContent();
+  showLoading('Removing…');
+  try{
+    await _cc(S.companyId,'kpiTargets').doc(id).delete();
+    hideLoading();await renderKpiTab();
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
 // ========================================
@@ -2363,7 +2414,8 @@ function deleteKpiTarget(id){
 function openAppraisalModal(kpiId,targetId){
   const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
   const target=getKpiTargets(S.companyId).find(t=>t.id===targetId);
-  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===S.user.id&&a.period===currentKpiPeriod());
+  const uid=S.user.staffId||S.user.id;
+  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===uid&&a.period===currentKpiPeriod());
   currentAppraisalId=existing?existing.id:null;
   document.getElementById('appraisal-kpi-info').innerHTML=`
     <div style="font-weight:600;margin-bottom:.3rem;">${esc(def?def.name:'KPI')}</div>
@@ -2378,24 +2430,28 @@ function openAppraisalModal(kpiId,targetId){
 }
 function saveAppraisalDraft(){saveAppraisalData('draft');}
 function submitAppraisal(){saveAppraisalData('submitted');}
-function saveAppraisalData(status){
+async function saveAppraisalData(status){
   const kpiId=document.getElementById('modal-kpi-appraisal').dataset.kpiId;
   const actual=v('ka-actual');const desc=v('ka-desc');const selfScore=parseFloat(v('ka-selfscore'));
   if(!actual){showAlert('kpi-appraisal-alert','Enter your actual achievement.','danger');return;}
   if(!desc){showAlert('kpi-appraisal-alert','Describe your activities.','danger');return;}
   if(status==='submitted'&&(isNaN(selfScore)||selfScore<0||selfScore>100)){showAlert('kpi-appraisal-alert','Enter a self-assessment score between 0 and 100.','danger');return;}
-  const appraisals=getKpiAppraisals(S.companyId);
-  if(currentAppraisalId){
-    const idx=appraisals.findIndex(a=>a.id===currentAppraisalId);
-    if(idx>-1)Object.assign(appraisals[idx],{actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),selfScore,status,updatedAt:new Date().toISOString()});
-  } else {
-    const newId='kappr_'+Date.now();
-    appraisals.push({id:newId,staffId:S.user.id,kpiId,period:currentKpiPeriod(),actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),selfScore,status,submittedAt:status==='submitted'?new Date().toISOString():null,createdAt:new Date().toISOString()});
-    currentAppraisalId=newId;
-  }
-  saveKpiAppraisals(S.companyId,appraisals);
-  addAudit(S.companyId,status==='submitted'?'Appraisal Submitted':'Appraisal Saved as Draft',`Staff: ${S.user.name}`);
-  closeModal('modal-kpi-appraisal');renderKpiSubContent();
+  showLoading('Saving…');
+  try{
+    const uid=S.user.staffId||S.user.id;
+    const period=currentKpiPeriod();
+    const data={actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),
+      selfScore:isNaN(selfScore)?null:selfScore,status,updatedAt:new Date().toISOString(),
+      submittedAt:status==='submitted'?new Date().toISOString():null};
+    if(currentAppraisalId){
+      await _cc(S.companyId,'kpiAppraisals').doc(currentAppraisalId).update(data);
+    } else {
+      const r=await _cc(S.companyId,'kpiAppraisals').add({...data,staffId:uid,kpiId,period,companyId:S.companyId,createdAt:new Date().toISOString()});
+      currentAppraisalId=r.id;
+    }
+    await addAudit(S.companyId,status==='submitted'?'Appraisal Submitted':'Draft Saved',`${S.user.name||uid} - ${period}`);
+    hideLoading();closeModal('modal-kpi-appraisal');await renderKpiTab();
+  }catch(e){hideLoading();showAlert('kpi-appraisal-alert','Error: '+e.message,'danger');}
 }
 
 // ========================================
@@ -2406,7 +2462,7 @@ function openKpiReviewModal(appraisalId){
   const a=appraisals.find(x=>x.id===appraisalId);if(!a)return;
   currentAppraisalId=appraisalId;
   const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
-  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
+  const staff=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
   const target=getKpiTargets(S.companyId).find(t=>t.kpiId===a.kpiId&&t.period===a.period);
   const autoScore=target?calcKpiScore(a.actualValue,target.targetValue,def?def.unit:'number'):null;
   document.getElementById('kpi-review-content').innerHTML=`
@@ -2423,24 +2479,37 @@ function openKpiReviewModal(appraisalId){
   hideAlert('kpi-review-alert');
   showModal('modal-kpi-review');
 }
-function approveAppraisal(){
+async function approveAppraisal(){
   const score=parseFloat(v('kr-score'));
   if(isNaN(score)||score<0||score>100){showAlert('kpi-review-alert','Enter a valid score (0–100).','danger');return;}
   const a=getKpiAppraisals(S.companyId).find(x=>x.id===currentAppraisalId);if(!a)return;
-  const approvals=getKpiApprovals(S.companyId);
-  approvals.push({id:'kapv_'+Date.now(),appraisalId:currentAppraisalId,staffId:a.staffId,kpiId:a.kpiId,period:a.period,managerScore:score,comment:v('kr-comment'),approvedBy:S.user.id,approvedAt:new Date().toISOString()});
-  saveKpiApprovals(S.companyId,approvals);
-  const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
-  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
-  addAudit(S.companyId,'Appraisal Approved',`${staff?staff.name:a.staffId} — ${def?def.name:'?'}: ${score}%`);
-  closeModal('modal-kpi-review');renderKpiSubContent();
+  showLoading('Approving…');
+  try{
+    // Check not already approved
+    const existApproval=await _cc(S.companyId,'kpiApprovals').where('appraisalId','==',currentAppraisalId).limit(1).get();
+    if(!existApproval.empty){
+      // Update existing approval
+      await existApproval.docs[0].ref.update({managerScore:score,comment:v('kr-comment'),approvedAt:new Date().toISOString()});
+    } else {
+      await _cc(S.companyId,'kpiApprovals').add({
+        appraisalId:currentAppraisalId,staffId:a.staffId,kpiId:a.kpiId,
+        period:a.period,managerScore:score,comment:v('kr-comment'),
+        approvedBy:S.user.staffId||S.user.id,approvedAt:new Date().toISOString(),companyId:S.companyId
+      });
+    }
+    await _cc(S.companyId,'kpiAppraisals').doc(currentAppraisalId).update({status:'approved'});
+    const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
+    const staffMember=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
+    await addAudit(S.companyId,'Appraisal Approved',`${staffMember?staffMember.name:a.staffId} — ${def?def.name:'?'}: ${score}%`);
+    hideLoading();closeModal('modal-kpi-review');await renderKpiTab();
+  }catch(e){hideLoading();showAlert('kpi-review-alert','Error: '+e.message,'danger');}
 }
 
 function showAppraisalDetail(appraisalId){
   const a=getKpiAppraisals(S.companyId).find(x=>x.id===appraisalId);if(!a)return;
   const appr=getKpiApprovals(S.companyId).find(x=>x.appraisalId===appraisalId);
   const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
-  const staff=getStaff(S.companyId).find(s=>s.id===a.staffId);
+  const staff=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
   document.getElementById('kpi-detail-content').innerHTML=`
     <div class="modal-title">${esc(staff?staff.name:a.staffId)} — ${esc(def?def.name:'KPI')}</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:.9rem;">Period: ${a.period}</div>
@@ -2572,7 +2641,7 @@ function printKpiReport(){
 // ========================================
 //  KPI PERIOD HELPER
 // ========================================
-function currentKpiPeriod(){
+function currentKpiPeriod_OLD(){
   const saved=DB.get('cwx_kpi_period');
   if(saved)return saved;
   const n=new Date();
@@ -2608,27 +2677,21 @@ function renderGuide(){
     </div>
     <div class="guide-section">
       <h3>🎯 KPI Module — Staff Guide</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>My KPIs tab:</strong> View all KPI targets your manager has assigned to you for the current period, your overall performance score, and your rating band (Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement).</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Self-Appraisal tab:</strong> For each assigned KPI, tap <strong>Start Self-Appraisal</strong> to enter your actual achievement, describe your activities, attach a link or evidence note, and enter your self-assessment score (0–100%). Save as Draft at any time and return later.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Submitting:</strong> Once you are satisfied with your entries, tap <strong>Submit</strong>. Submitted appraisals are sent to your manager for review. You cannot edit after submission unless your manager recalls it.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>My History tab:</strong> View all your past appraisal results by period, including manager scores, feedback comments, and your overall performance rating for each period.</div></div>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>My KPIs tab:</strong> View all KPI targets assigned to you for the current month. Your overall weighted score and rating band (Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement) are shown at the top.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Self-Appraisal tab:</strong> For each assigned KPI, tap <strong>Start Self-Appraisal</strong> to enter your actual achievement value, describe your activities, optionally attach evidence (link or note), and enter your self-assessment score (0–100%). Tap <strong>Save Draft</strong> to save progress, or <strong>Submit</strong> when ready for manager review.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Appraisal Period:</strong> Each appraisal covers one calendar month (e.g. 2025-06 = June 2025). You submit one appraisal per KPI per month. All monthly results accumulate across the year to form your annual performance record.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>History tab:</strong> View all past monthly appraisal results, manager scores, and feedback. Select any year to see that year's cumulative performance across all periods.</div></div>
     </div>
     <div class="guide-section">
       <h3>🎯 KPI Module — Manager Guide</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Setup — Categories:</strong> Create performance areas (e.g. Sales, Operations, Attendance) and assign a weighting percentage to each. All category weightings must add up to 100%.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup — KPI Definitions:</strong> For each category, define measurable KPIs with a name, unit (₦, %, number, or yes/no), and frequency (daily, weekly, monthly).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Targets:</strong> Assign each KPI to individual staff members, entire departments, or job roles, with a specific target value and period (month). This is what staff will be measured against.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Review tab:</strong> When staff submit self-appraisals, they appear here as Pending. Open each one, review the actual achievement and evidence, adjust the score if needed, add feedback, and tap <strong>Approve</strong>. The system automatically calculates the weighted overall score once all KPIs are approved.</div></div>
-      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Rankings tab:</strong> See all staff ranked by their overall performance score for the selected period, with rating bands displayed.</div></div>
-      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Performance Bands:</strong> Tap the <strong>Bands</strong> button to customise the score thresholds for each rating label (default: ≥90% Exceeds, ≥75% Meets, ≥60% Developing, below 60% Needs Improvement).</div></div>
-      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Print PDF:</strong> Tap <strong>Print PDF</strong> to generate a full printable KPI report showing rankings, individual scores, and manager feedback for the selected period.</div></div>
-      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Audit Trail:</strong> Every KPI action — creation, target assignment, submission, approval — is logged with timestamp and responsible user. Access via the Audit Trail tab.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>👔 Other Manager Features</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Reports tab:</strong> View daily attendance logs, staff summaries, and detailed activity reports. Filter by date and department. Print to PDF.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Staff tab:</strong> Register new staff, manage departments and job roles, assign Manager role.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Company Profile:</strong> Edit company details via Profile tab → Edit Company Profile.</div></div>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Setup — Categories:</strong> Create performance areas (e.g. Sales, Operations) and assign each a % weighting. All weightings must add up to exactly 100%.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup — KPI Definitions:</strong> Under each category, define measurable KPIs with name, unit (₦, %, number, Yes/No), and frequency (daily/weekly/monthly).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Targets:</strong> Assign each KPI a target value for a specific month (YYYY-MM format). Assign to individual staff, entire departments, or job roles. The period format is 2025-06 for June 2025.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Review tab:</strong> Shows three sections — (a) <strong>Pending:</strong> submissions awaiting your review — tap to open, adjust score if needed, add feedback and approve. (b) <strong>Approved:</strong> already reviewed this month. (c) <strong>Awaiting Submission:</strong> staff who have been assigned targets but have not yet submitted — useful for follow-up.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Monthly + Annual scoring:</strong> Each approved month contributes to the annual record. Rankings and Dashboard show the current month's scores. The annual performance report (Print PDF) shows both monthly breakdown and the cumulative year average for each staff member.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Rankings tab:</strong> Staff ranked by their overall weighted performance score for the current month. Select a different period from the dropdown to view historical rankings.</div></div>
+      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Performance Bands (Bands button):</strong> Customise score thresholds — default: ≥90% Exceeds Expectations, ≥75% Meets Expectations, ≥60% Developing, below 60% Needs Improvement.</div></div>
+      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Print PDF:</strong> Generates a full performance report for the selected period, showing rankings, individual KPI scores, and manager feedback.</div></div>
     </div>
     <div class="guide-section">
       <h3>📱 Installing as an App</h3>
@@ -2662,7 +2725,9 @@ async function doLogout(){
   Object.assign(S,{companyId:null,company:null,user:null,signedIn:false,todayLog:null,tasks:[],_staff:[],_depts:[],_roles:[]});
   closeModal('modal-user-menu');
   showScreen('company-screen');
-  await renderCompanyScreen();
+  document.getElementById('co-code-input').value='';
+  clearCoCodeResult();
+  hideAlert('co-code-alert');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');});});
