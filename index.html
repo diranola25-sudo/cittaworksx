@@ -191,7 +191,7 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <!-- ========== COMPANY SELECT ========== -->
-<div class="screen active" id="company-screen" style="align-items:center;justify-content:center;padding:1.5rem;background:var(--bg);">
+<div id="company-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--bg);">
   <div style="width:100%;max-width:440px;">
     <div style="text-align:center;margin-bottom:2rem;">
       <div style="width:68px;height:68px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:30px;color:#0a0f1e;margin:0 auto 12px;">C</div>
@@ -205,12 +205,14 @@ tr:last-child td{border-bottom:none;}
     <div style="text-align:center;margin-top:.75rem;">
       <button class="theme-toggle" onclick="toggleTheme()"></button>
     </div>
+    <!-- Debug panel - shows what happened on tap -->
+    <div id="cwx-debug" style="display:none;margin-top:1rem;background:rgba(255,165,0,.1);border:1px solid orange;border-radius:8px;padding:.75rem;font-size:11px;font-family:monospace;color:orange;white-space:pre-wrap;max-height:120px;overflow-y:auto;"></div>
   </div>
 </div>
 
 
 <!-- ========== LOGIN ========== -->
-<div class="screen" id="login-screen">
+<div id="login-screen" style="display:none;flex-direction:column;min-height:100vh;">
   <div style="align-items:center;justify-content:center;display:flex;min-height:100vh;padding:1.5rem;background:var(--bg);">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:2.25rem;width:100%;max-width:400px;">
       <div style="text-align:center;margin-bottom:1.75rem;">
@@ -231,7 +233,7 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <!-- ========== MAIN APP ========== -->
-<div class="screen" id="main-screen">
+<div id="main-screen" style="display:none;flex-direction:column;min-height:100vh;">
   <div class="topbar">
     <div class="topbar-logo">
       <div class="logo-mark">C</div>
@@ -883,7 +885,27 @@ window.addEventListener('load',async()=>{
 // ========================================
 //  SCREENS
 // ========================================
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showScreen(id){
+  // Use direct style.display - NO CSS class dependency
+  var screens=['company-screen','login-screen','main-screen'];
+  screens.forEach(function(sid){
+    var el=document.getElementById(sid);
+    if(el) el.style.display='none';
+  });
+  var target=document.getElementById(id);
+  if(target){
+    target.style.display='flex';
+    target.style.flexDirection='column';
+    if(id==='company-screen'){
+      target.style.alignItems='center';
+      target.style.justifyContent='center';
+      target.style.minHeight='100vh';
+    }
+    console.log('CWX showScreen: showed',id);
+  } else {
+    console.error('CWX showScreen: element not found:',id);
+  }
+}
 
 function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorage*/
   const cos=getCompanies();
@@ -971,19 +993,29 @@ async function renderCompanyScreen(){
   }
 }
 
+function cwxDebug(msg){
+  console.log('CWX:',msg);
+  var el=document.getElementById('cwx-debug');
+  if(el){el.style.display='block';el.textContent+=new Date().toLocaleTimeString()+' '+msg+'\n';}
+}
+
 function _cwxPickCompany(idx){
+  cwxDebug('Card tapped: index='+idx);
   var companies=window._cwxCompanies||[];
+  cwxDebug('Companies loaded: '+companies.length);
   var co=companies[idx];
   if(!co){
-    console.error('CWX: company not found at index',idx,'companies=',companies);
-    alert('Error: Company data not loaded. Please tap Refresh and try again.');
+    cwxDebug('ERROR: no company at index '+idx);
+    alert('Company data missing. Tap Refresh and try again.');
     return;
   }
+  cwxDebug('Selected: '+co.name+' id='+co.id);
   selectCompany(co.id,co);
 }
 
 function selectCompany(id,co){
-  if(!id||!co){console.error('CWX selectCompany: missing id or co',id,co);return;}
+  cwxDebug('selectCompany called: id='+id+' name='+(co?co.name:'null'));
+  if(!id||!co){cwxDebug('ERROR: missing id or co');return;}
   S.companyId=id;S.company=co;
   var markEl=document.getElementById('login-co-mark');
   var nameEl=document.getElementById('login-co-name');
@@ -994,15 +1026,9 @@ function selectCompany(id,co){
   if(idEl)idEl.value='';
   if(pwEl)pwEl.value='';
   hideAlert('login-alert');
-  console.log('CWX: switching to login-screen for',co.name);
+  cwxDebug('Calling showScreen(login-screen)');
   showScreen('login-screen');
-  // Double-check screen switched
-  var ls=document.getElementById('login-screen');
-  if(ls&&!ls.classList.contains('active')){
-    console.error('CWX: showScreen failed! Forcing display.');
-    document.querySelectorAll('.screen').forEach(s=>s.style.display='none');
-    ls.style.display='flex';
-  }
+  cwxDebug('showScreen done. login-screen display='+document.getElementById('login-screen').style.display);
 }
 
 
