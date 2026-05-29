@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="theme-color" content="#0a0f1e"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -851,7 +854,21 @@ function captureLocation(dotId,txtId,cb){
 //  INIT
 // ========================================
 window.addEventListener('load',async()=>{
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // Force service worker update + clear all HTML caches on every load
+  if('serviceWorker' in navigator){
+    try{
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs){await r.update();}
+      // Clear any cached HTML
+      const cacheKeys=await caches.keys();
+      for(const key of cacheKeys){
+        const cache=await caches.open(key);
+        await cache.delete(new Request(location.href));
+        await cache.delete(new Request(location.origin+'/index.html'));
+      }
+    }catch(e){}
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
   window.addEventListener('online',()=>document.getElementById('offline-banner').classList.add('hidden'));
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
