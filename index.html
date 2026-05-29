@@ -18,8 +18,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 /* Loading overlay */
-#cwx-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .3s;}
-#cwx-loading.hidden{display:none;}
+#cwx-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
+#cwx-loading.hidden{display:none!important;pointer-events:none!important;}
 .cwx-spinner{width:38px;height:38px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:cwxspin .8s linear infinite;}
 @keyframes cwxspin{to{transform:rotate(360deg);}}
 </style>
@@ -895,60 +895,49 @@ function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorag
 // ========================================
 async function renderCompanyScreen(){
   showScreen('company-screen');
+  hideLoading();
   const list=document.getElementById('company-list');
   if(!list)return;
   if(!_firebaseReady){
-    list.innerHTML=`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:1.25rem;font-size:13px;line-height:1.8;">
-      <div style="font-weight:700;color:#ef4444;font-size:15px;margin-bottom:.5rem;">⚠ Firebase Setup Required</div>
-      <div style="color:var(--text2);">This app needs a Firebase database to work across devices.</div>
-      <div style="margin-top:.75rem;background:var(--bg3);border-radius:8px;padding:.75rem;font-size:12px;color:var(--text3);">
-        <strong style="color:var(--text);">To set up:</strong><br>
-        1. Create a free project at <strong>console.firebase.google.com</strong><br>
-        2. Enable Firestore Database<br>
-        3. Open <strong>index.html</strong> in a text editor<br>
-        4. Find <code style="color:var(--accent);">AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA</code> and replace all 6 config values<br>
-        5. Do the same in <strong>admin.html</strong> and upload both files
-      </div>
-    </div>`;
-    hideLoading();
+    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:1.25rem;font-size:13px;"><div style="font-weight:700;color:#ef4444;margin-bottom:.5rem;">Firebase Setup Required</div><div style="color:var(--text2);">Config not set. Upload the correctly configured index.html to GitHub.</div></div>';
     return;
   }
-  list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies…</p>';
+  list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies...</p>';
   try{
     const companies=await getCompaniesAsync();
     hideLoading();
     if(!companies.length){
-      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered.<br><span style="font-size:12px;display:block;margin-top:.3rem;">Ask your administrator to register your company in the Admin Portal.</span></div>';
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.</div>';
       return;
     }
-    list.innerHTML=companies.map(function(co){
+    window._cwxCompanies=companies;
+    list.innerHTML=companies.map(function(co,idx){
       var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var bg=co.color||'rgba(0,212,170,.15)';
       var tc=co.textColor||'#00d4aa';
       var l=(co.name||'?').charAt(0).toUpperCase();
-      return '<button type="button" data-coid="'+co.id+'" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;text-align:left;-webkit-appearance:none;">'
-        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+l+'</div>'
-        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
-        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
-        +'</button>';
+      return '<a href="javascript:void(0)" onclick="_cwxPickCompany('+idx+');return false;" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin-bottom:.55rem;text-decoration:none;-webkit-tap-highlight-color:rgba(0,212,170,.2);">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
+        +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="pointer-events:none;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
+        +'</a>';
     }).join('');
-    // Attach onclick directly to each button — most reliable across all browsers
-    list.querySelectorAll('button[data-coid]').forEach(function(btn){
-      const co=companies.find(c=>c.id===btn.getAttribute('data-coid'));
-      btn.onclick=function(){selectCompany(this.getAttribute('data-coid'),co);};
-      btn.onmouseenter=function(){this.style.borderColor='var(--accent)';};
-      btn.onmouseleave=function(){this.style.borderColor='var(--border)';};
-    });
   }catch(e){
     hideLoading();
-    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;font-size:13px;color:#ef4444;text-align:center;">Connection error: '+esc(e.message)+'<br><span style="font-size:12px;color:var(--text3);">Check your Firebase configuration in index.html.</span></div>';
+    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;font-size:13px;color:#ef4444;text-align:center;">Connection error: '+esc(e.message)+'</div>';
   }
+}
+
+function _cwxPickCompany(idx){
+  var co=(window._cwxCompanies||[])[idx];
+  if(!co)return;
+  selectCompany(co.id,co);
 }
 
 function selectCompany(id,co){
   if(!id||!co)return;
-  S.companyId=id; S.company=co;
+  S.companyId=id;S.company=co;
   document.getElementById('login-co-mark').textContent=(co.name||'C').charAt(0).toUpperCase();
   document.getElementById('login-co-name').textContent=co.name||'CittaWorksX';
   document.getElementById('login-id').value='';
