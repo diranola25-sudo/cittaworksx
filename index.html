@@ -1708,49 +1708,86 @@ async function saveCoProfile(){
 //  USER GUIDE
 // ========================================
 function renderGuide(){
+  const isManager=S.user&&S.user.systemRole==='manager';
   document.getElementById('guide-content').innerHTML=`
     <div class="guide-section">
       <h3>🏢 Getting Started</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Your company must be registered in the <strong>Admin Portal</strong> (admin.html) before you can log in.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">On the home screen, <strong>select your company</strong>, then enter your <strong>Staff ID</strong> and <strong>Password</strong> to sign in.</div></div>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Company Code:</strong> On the login screen, enter the unique Company Code provided by your system administrator. This code identifies your company workspace.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Sign In:</strong> After entering the company code, enter your <strong>email address</strong> and <strong>password</strong> on the login screen. These credentials are set up by your manager or administrator.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Offline Support:</strong> CittaWorksX works offline. Data syncs automatically to the cloud when your connection is restored.</div></div>
     </div>
     <div class="guide-section">
       <h3>⏰ Daily Sign-In</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Open the app and tap the <strong>Sign In</strong> button on the Dashboard tab. The app will capture your precise location automatically.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Allow location access when prompted — this is required for accurate attendance tracking.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Your sign-in time and location are recorded instantly.</div></div>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">On the <strong>Home</strong> tab, tap <strong>Sign In</strong>. Your GPS location is captured automatically — allow location access when prompted.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">The Dashboard shows your sign-in time, task count, total hours, and current status (Not In / Signed In / Signed Out).</div></div>
     </div>
     <div class="guide-section">
-      <h3>✅ Adding Tasks</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Go to the <strong>Tasks</strong> tab and tap <strong>+ Add Task</strong>.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Each task requires: <strong>Description</strong> (what you did), <strong>Duration</strong> (minutes spent), and <strong>Value Added</strong> (₦ amount).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tasks are <strong>saved automatically</strong> as you type — you can close the app and return later to continue editing.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body">The total hours and total value are shown at the bottom of the tasks list.</div></div>
+      <h3>✅ Tasks</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Go to the <strong>Tasks</strong> tab → tap <strong>+ Add Task</strong>. Each task requires a <strong>Description</strong>, <strong>Duration</strong> (minutes), and <strong>Value Added</strong> (₦ amount).</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Tasks <strong>auto-save to the cloud</strong> as you type. You can close the app and return later without losing your work.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">When done, tap <strong>Review & Submit Tasks</strong> to see a summary before signing out.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Tap <strong>Submit & Sign Out</strong> to submit all tasks and record your sign-out location. Tasks are locked after sign-out.</div></div>
+    </div>
+
+    ${isManager?`
+    <div class="guide-section">
+      <h3>📊 Reports (Manager)</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Daily tab:</strong> All staff sign-in/out logs for the selected date range, sorted by most recent. Tap any row for full detail including location and task breakdown.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>By Staff tab:</strong> Aggregate totals per staff member — total days, hours worked, and total value added. Useful for monthly performance overview.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Summary tab:</strong> Company-wide totals for the selected period.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Detailed tab:</strong> Full task-by-task breakdown grouped by department and staff. Use the <strong>Print PDF</strong> button to generate a printable report.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body">Use the <strong>From/To date</strong> and <strong>Department</strong> filters to narrow results.</div></div>
     </div>
     <div class="guide-section">
-      <h3>📋 Review & Sign Out</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">When done for the day, tap <strong>Review & Submit Tasks</strong> at the bottom of the Tasks tab.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">A <strong>review screen</strong> shows all your tasks, durations, and values. Check everything carefully.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tap <strong>Submit & Sign Out</strong>. Your sign-out location is captured and the day is complete.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Important:</strong> You cannot sign out without completing and submitting at least one task.</div></div>
+      <h3>👥 Staff Management (Manager)</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Register Staff:</strong> Tap <strong>+ Register</strong> to add a new staff member. The email address is their login credential for the Staff Portal.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Edit Staff:</strong> Tap any staff card to view details, then tap Edit to update name, role, department, or password.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Departments & Roles:</strong> Tap <strong>Dept/Roles</strong> to manage the dropdown lists used when registering staff.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Manager Role:</strong> Use the <strong>Make Manager</strong> / <strong>Remove Manager</strong> button on a staff card to toggle manager access.</div></div>
     </div>
     <div class="guide-section">
-      <h3>👔 Manager Features</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Reports tab:</strong> View daily logs, staff summaries, and detailed activity reports filterable by date and department. Print to PDF.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Staff tab:</strong> Register new staff, assign roles, manage departments and job roles (via Dept/Roles button).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Company Profile:</strong> Edit company details via the Profile tab → Edit Company Profile.</div></div>
+      <h3>🎯 KPI Module — Manager Guide</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Dashboard tab:</strong> Overview of team performance for the selected period — average score, pending reviews, category count. Shows each staff member's score with rating badge.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup → Categories:</strong> Create performance areas (e.g. Sales, Operations, Attendance). Each category has a <strong>weighting %</strong>. All category weightings must add up to exactly 100%.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Setup → KPI Definitions:</strong> Under each category, define individual measurable KPIs with a name, measurement unit (Number, ₦ Currency, Percentage, Yes/No), and frequency (Daily/Weekly/Monthly).</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Targets tab:</strong> Assign each KPI a target value for a specific month. Select the KPI, assign to an individual staff member, an entire department, or a job role, set the target value, and select the period (YYYY-MM format, e.g. 2025-06 for June 2025).</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Review tab:</strong> Three sections — (a) <strong>Pending:</strong> submitted appraisals awaiting your approval. Tap to open, review, adjust score, add feedback, and approve. (b) <strong>Approved:</strong> already reviewed this period. (c) <strong>Awaiting Submission:</strong> staff with assigned targets who have not yet submitted — useful for follow-up reminders.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Rankings tab:</strong> All staff ranked by their overall weighted score for the current period. Higher weighting categories contribute more to the final score.</div></div>
+      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Audit Trail tab:</strong> A chronological log of all KPI actions — categories created, targets assigned, appraisals submitted and approved — stored permanently in the database.</div></div>
+      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Bands button:</strong> Customise score thresholds: default ≥90% = Exceeds Expectations, ≥75% = Meets Expectations, ≥60% = Developing, below 60% = Needs Improvement.</div></div>
+      <div class="guide-step"><div class="step-num">9</div><div class="step-body"><strong>Print PDF:</strong> Generates a full performance report for the selected period showing rankings, individual KPI scores, and manager feedback.</div></div>
+      <div class="guide-step"><div class="step-num">10</div><div class="step-body"><strong>Monthly/Annual cycle:</strong> Appraisals follow a monthly calendar. Each month (YYYY-MM period) is independent. All monthly scores accumulate to form the annual record. The annual score is the weighted average of all completed months.</div></div>
+    </div>`:`
+    <div class="guide-section">
+      <h3>🎯 KPI Module — My KPIs Tab</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>My KPIs</strong> tab shows all KPI targets your manager has assigned to you for the selected month.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">At the top, your <strong>Overall Score</strong> and <strong>Rating Band</strong> for the period are displayed — Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Each KPI card shows the KPI name, category, frequency, target value, and your current score (once approved by your manager). Tap a card to go directly to Self-Appraisal for that KPI.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Use the <strong>Period</strong> selector at the top to view a different month's targets.</div></div>
     </div>
     <div class="guide-section">
-      <h3>📱 Installing as App</h3>
+      <h3>📝 KPI Module — Self-Appraisal Tab</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>Self-Appraisal</strong> tab lists all your assigned KPIs with their current submission status: Not Started, Draft, Submitted, or Approved.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Tap <strong>Start Self-Appraisal →</strong> on any KPI to open the submission form. Fill in: <strong>Actual Achievement</strong> (your result), <strong>Description of Activities</strong> (what you did), optional <strong>Evidence</strong> (link or note), and your <strong>Self-Assessment Score</strong> (0–100%).</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tap <strong>Save Draft</strong> to save your progress without submitting. You can return and continue at any time.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Tap <strong>Submit</strong> when ready for manager review. Once submitted, you cannot edit until your manager returns it. The status changes to <strong>Submitted</strong>.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body">After your manager approves, the status changes to <strong>Approved</strong> and you will see the manager's score and any feedback comments.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Period:</strong> Each appraisal covers one calendar month (e.g. 2025-06 = June 2025). Submit one appraisal per KPI per month before your manager's review deadline.</div></div>
+    </div>
+    <div class="guide-section">
+      <h3>📅 KPI Module — My History Tab</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>My History</strong> tab shows all your past approved appraisals organised by year.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body">At the top, the <strong>Annual Score card</strong> shows your overall weighted average for the selected year and your annual rating band.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Below, each <strong>completed month</strong> is listed with its score and rating. Tap any month card to see the full breakdown — individual KPI scores and manager feedback for each KPI.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Use the <strong>Assessment Year</strong> dropdown to switch between years. Each year is treated as a distinct assessment cycle.</div></div>
+    </div>`}
+    <div class="guide-section">
+      <h3>📱 Installing as an App</h3>
       <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Android:</strong> Open in Chrome → tap ⋮ menu → <em>Add to Home screen</em>.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>iPhone:</strong> Open in Safari → tap the Share icon → <em>Add to Home Screen</em>.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">The app works <strong>offline</strong> — all data is saved on your device and syncs automatically when connected.</div></div>
-    </div>
-    <div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:10px;padding:1rem;font-size:13px;color:var(--text2);line-height:1.7;">
-      <strong style="color:var(--accent);">Need help?</strong> Contact your manager or the system administrator at your company.
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>iPhone:</strong> Open in Safari → tap Share icon → <em>Add to Home Screen</em>.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body">The app icon appears on your home screen. It works offline and behaves like a native app.</div></div>
     </div>`;
 }
-
 // ========================================
 //  KPI DATA LAYER — Firebase-backed
 //  All KPI data lives in Firestore sub-collections
@@ -1884,6 +1921,11 @@ async function renderKpiTab(){
   const isManager=S.user&&S.user.systemRole==='manager';
   const c=document.getElementById('kpi-content');
   const period=currentKpiPeriod();
+  // Reset to sensible default when switching between manager/staff contexts
+  const managerTabs=['dashboard','setup','targets','review','rankings','audit'];
+  const staffTabs=['myKpis','appraise','history'];
+  if(isManager&&staffTabs.includes(kpiSubTab))kpiSubTab='dashboard';
+  if(!isManager&&managerTabs.includes(kpiSubTab))kpiSubTab='myKpis';
 
   if(isManager){
     c.innerHTML=`
@@ -1926,7 +1968,7 @@ function renderKpiSubContent(){
 
   // ---- MANAGER TABS ----
   if(kpiSubTab==='dashboard'){
-    const staff=getStaff(cid);
+    const staff=S._staff||[];
     const approvals=getKpiApprovals(cid).filter(a=>a.period===period);
     const appraisals=getKpiAppraisals(cid).filter(a=>a.period===period&&a.status==='submitted');
     const pendingCount=appraisals.filter(a=>!getKpiApprovals(cid).find(ap=>ap.appraisalId===a.id)).length;
@@ -1959,7 +2001,7 @@ function renderKpiSubContent(){
       <div class="card">
         <div class="card-title">Staff Performance — ${period}</div>
         ${staff.length?staff.map(s=>{
-          const score=calcOverallScore(s.id,period,cid);
+          const score=calcOverallScore(s.staffId||s.id,period,cid);
           const band=getRatingBand(score,cid);
           const pending=appraisals.filter(a=>a.staffId===s.id&&!getKpiApprovals(cid).find(ap=>ap.appraisalId===a.id)).length;
           return`<div style="display:flex;align-items:center;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--border);">
@@ -2084,13 +2126,14 @@ function renderKpiSubContent(){
   }
 
   else if(kpiSubTab==='rankings'){
-    const staff=getStaff(cid);
+    const staff=S._staff||[];
     const period=currentKpiPeriod();
     const ranked=staff.map(s=>{
-      const score=calcOverallScore(s.id,period,cid);
-      return{...s,score};
+      const sid=s.staffId||s.id;
+      const score=calcOverallScore(sid,period,cid);
+      return{...s,_uid:sid,score};
     }).filter(s=>s.score!==null).sort((a,b)=>b.score-a.score);
-    const unranked=staff.filter(s=>!ranked.find(r=>r.id===s.id));
+    const unranked=staff.filter(s=>!ranked.find(r=>r._uid===(s.staffId||s.id)));
     c.innerHTML=`
       <div style="margin-bottom:.75rem;font-size:12px;color:var(--text3);">Period: ${period}</div>
       ${ranked.length?ranked.map((s,i)=>{
@@ -2129,19 +2172,24 @@ function renderKpiSubContent(){
 
   // ---- STAFF TABS ----
   else if(kpiSubTab==='myKpis'){
-    const period=currentKpiPeriod();
+    const periodEl=document.getElementById('kpi-mykpis-period');
+    const period=periodEl?periodEl.value:currentKpiPeriod();
+    const uid=S.user.staffId||S.user.id;
     const targets=getKpiTargets(cid).filter(t=>{
       const u=S.user;
-      return t.period===period&&(t.assignVal===u.id||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
+      return t.period===period&&(t.assignVal===uid||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
     });
     const defs=getKpiDefs(cid);
     const cats=getKpiCats(cid);
-    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
-    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
-    const overallScore=calcOverallScore(S.user.id,period,cid);
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===uid&&a.period===period);
+    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===uid&&a.period===period);
+    const overallScore=calcOverallScore(uid,period,cid);
     const band=getRatingBand(overallScore,cid);
     c.innerHTML=`
-      <div style="margin-bottom:.75rem;font-size:12px;color:var(--text3);">Period: <strong style="color:var(--text);">${period}</strong></div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;flex-wrap:wrap;">
+        <span style="font-size:13px;color:var(--text2);">Period:</span>
+        <input type="month" id="kpi-mykpis-period" value="${period}" max="${currentKpiPeriod()}" onchange="renderKpiSubContent()" style="background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.4rem .8rem;border-radius:var(--br);font-size:13px;outline:none;"/>
+      </div>
       <div style="display:flex;align-items:center;gap:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
         ${scoreRingSVG(overallScore,72)}
         <div>
@@ -2156,7 +2204,7 @@ function renderKpiSubContent(){
         const appr=appraisals.find(a=>a.kpiId===t.kpiId);
         const apprv=appr?approvals.find(a=>a.appraisalId===appr.id):null;
         const score=apprv?apprv.managerScore:null;
-        return`<div class="kpi-card">
+        return`<div class="kpi-card" onclick="kpiSubTab='appraise';renderKpiTab()" style="cursor:pointer;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
             <div>
               <div style="font-weight:600;font-size:13px;">${esc(def?def.name:'?')}</div>
@@ -2173,15 +2221,21 @@ function renderKpiSubContent(){
   }
 
   else if(kpiSubTab==='appraise'){
-    const period=currentKpiPeriod();
+    const periodEl=document.getElementById('kpi-appraise-period');
+    const period=periodEl?periodEl.value:currentKpiPeriod();
+    const uid=S.user.staffId||S.user.id;
     const targets=getKpiTargets(cid).filter(t=>{
       const u=S.user;
-      return t.period===period&&(t.assignVal===u.id||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
+      return t.period===period&&(t.assignVal===uid||(t.assignType==='department'&&t.assignVal===u.department)||(t.assignType==='role'&&t.assignVal===u.role));
     });
     const defs=getKpiDefs(cid);
-    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
-    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===period);
+    const appraisals=getKpiAppraisals(cid).filter(a=>a.staffId===uid&&a.period===period);
+    const approvals=getKpiApprovals(cid).filter(a=>a.staffId===uid&&a.period===period);
     c.innerHTML=`
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap;">
+        <span style="font-size:13px;color:var(--text2);">Period:</span>
+        <input type="month" id="kpi-appraise-period" value="${period}" max="${currentKpiPeriod()}" onchange="renderKpiSubContent()" style="background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.4rem .8rem;border-radius:var(--br);font-size:13px;outline:none;"/>
+      </div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:.9rem;">Enter your actual achievements for each KPI. Save as draft or submit for manager review.</div>
       ${targets.length?targets.map(t=>{
         const def=defs.find(d=>d.id===t.kpiId);
@@ -2202,22 +2256,68 @@ function renderKpiSubContent(){
   }
 
   else if(kpiSubTab==='history'){
-    const allPeriods=[...new Set(getKpiApprovals(cid).filter(a=>a.staffId===S.user.id).map(a=>a.period))].sort().reverse();
-    c.innerHTML=allPeriods.length?allPeriods.map(p=>{
-      const score=calcOverallScore(S.user.id,p,cid);
-      const band=getRatingBand(score,cid);
-      const approvals=getKpiApprovals(cid).filter(a=>a.staffId===S.user.id&&a.period===p);
-      return`<div class="kpi-card" onclick="showMyPeriodDetail('${p}')">
-        <div style="display:flex;align-items:center;gap:10px;">
-          ${scoreRingSVG(score,52)}
-          <div style="flex:1;">
-            <div style="font-weight:600;">${p}</div>
-            <div style="font-size:12px;color:var(--text3);">${approvals.length} KPI(s) approved</div>
-            <span class="kpi-pill ${band.cls}" style="margin-top:3px;">${band.label}</span>
-          </div>
+    const uid=S.user.staffId||S.user.id;
+    const allApprovals=getKpiApprovals(cid).filter(a=>a.staffId===uid);
+    const allAppraisals=getKpiAppraisals(cid).filter(a=>a.staffId===uid);
+    const allPeriods=[...new Set(allApprovals.map(a=>a.period))].sort().reverse();
+    // Group periods by year
+    const byYear={};
+    allPeriods.forEach(p=>{
+      const y=periodYear(p);
+      if(!byYear[y])byYear[y]=[];
+      byYear[y].push(p);
+    });
+    const years=Object.keys(byYear).sort().reverse();
+    // Get saved year filter (default current year)
+    const selYear=parseInt(document.getElementById('kpi-history-year')?.value||currentKpiYear());
+    const yearOptions=years.length?years:([currentKpiYear()+'']);
+    if(!allPeriods.length){
+      c.innerHTML='<p style="color:var(--text3);font-size:13px;">No appraisal history yet. Complete your first month\'s appraisal to see results here.</p>';
+      return;
+    }
+    // Annual cumulative score: average of all monthly scores in the year
+    function annualScore(yr){
+      const ps=(byYear[yr]||[]);
+      const scores=ps.map(p=>calcOverallScore(uid,p,cid)).filter(s=>s!==null);
+      return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
+    }
+    const annScore=annualScore(selYear);
+    const annBand=getRatingBand(annScore,cid);
+    c.innerHTML=`
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <span style="font-size:13px;color:var(--text2);">Assessment Year:</span>
+        <select id="kpi-history-year" onchange="renderKpiSubContent()" style="background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.4rem .8rem;border-radius:var(--br);font-size:13px;outline:none;">
+          ${yearOptions.map(y=>`<option value="${y}" ${parseInt(y)===selYear?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <!-- Annual summary card -->
+      <div style="background:var(--bg2);border:1.5px solid var(--accent);border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;">
+        ${scoreRingSVG(annScore,68)}
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;">Annual Performance ${selYear}</div>
+          <div style="font-size:18px;font-weight:700;margin:.15rem 0;">${annScore!==null?annScore+'%':'In Progress'}</div>
+          <span class="kpi-pill ${annBand.cls}">${annBand.label}</span>
+          <div style="font-size:11px;color:var(--text3);margin-top:.3rem;">${(byYear[selYear]||[]).length} month(s) completed</div>
         </div>
-      </div>`;
-    }).join(''):'<p style="color:var(--text3);font-size:13px;">No appraisal history yet.</p>';
+      </div>
+      <!-- Monthly breakdown -->
+      <div class="card-title">Monthly Breakdown — ${selYear}</div>
+      ${(byYear[selYear]||[]).map(p=>{
+        const score=calcOverallScore(uid,p,cid);
+        const band=getRatingBand(score,cid);
+        const monthApprovals=allApprovals.filter(a=>a.period===p);
+        const monthName=new Date(p+'-01').toLocaleString('en-NG',{month:'long'});
+        return`<div class="kpi-card" style="cursor:pointer;" onclick="showMyPeriodDetail('${p}','${uid}')">
+          <div style="display:flex;align-items:center;gap:12px;">
+            ${scoreRingSVG(score,52)}
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:14px;">${monthName} ${p.split('-')[0]}</div>
+              <div style="font-size:12px;color:var(--text3);">${p} · ${monthApprovals.length} KPI(s) approved</div>
+              <span class="kpi-pill ${band.cls}" style="margin-top:3px;">${band.label}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')||'<p style="color:var(--text3);font-size:13px;">No completed months in '+selYear+'.</p>'}`;
   }
 }
 
@@ -2415,7 +2515,8 @@ function openAppraisalModal(kpiId,targetId){
   const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
   const target=getKpiTargets(S.companyId).find(t=>t.id===targetId);
   const uid=S.user.staffId||S.user.id;
-  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===uid&&a.period===currentKpiPeriod());
+  const existingPeriod=currentKpiPeriod();
+  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===uid&&a.period===existingPeriod);
   currentAppraisalId=existing?existing.id:null;
   document.getElementById('appraisal-kpi-info').innerHTML=`
     <div style="font-weight:600;margin-bottom:.3rem;">${esc(def?def.name:'KPI')}</div>
@@ -2526,10 +2627,11 @@ function showAppraisalDetail(appraisalId){
   showModal('modal-kpi-detail');
 }
 
-function showMyPeriodDetail(period){
-  const approvals=getKpiApprovals(S.companyId).filter(a=>a.staffId===S.user.id&&a.period===period);
+function showMyPeriodDetail(period,uid){
+  if(!uid)uid=S.user.staffId||S.user.id;
+  const approvals=getKpiApprovals(S.companyId).filter(a=>a.staffId===uid&&a.period===period);
   const defs=getKpiDefs(S.companyId);
-  const score=calcOverallScore(S.user.id,period,S.companyId);
+  const score=calcOverallScore(uid||S.user.staffId||S.user.id,period,S.companyId);
   const band=getRatingBand(score,S.companyId);
   document.getElementById('kpi-detail-content').innerHTML=`
     <div class="modal-title">Performance — ${period}</div>
