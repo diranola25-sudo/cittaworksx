@@ -2681,6 +2681,55 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('clic
 
 // PWA
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+
+// ============================================================
+//  UTILITY FUNCTIONS
+// ============================================================
+function showModal(id){const el=document.getElementById(id);if(el)el.classList.remove('hidden');}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.add('hidden');}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='alert alert-'+type;el.textContent=msg;el.style.display='block';el.classList.remove('hidden');}
+function hideAlert(id){const el=document.getElementById(id);if(el){el.classList.add('hidden');el.style.display='none';}}
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function initials(n){return String(n||'?').split(' ').slice(0,2).map(w=>w.charAt(0).toUpperCase()).join('');}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function fmtTime(iso){if(!iso)return'—';try{return new Date(iso).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});}catch(e){return iso.substring(11,16);}}
+function fmtNum(n){try{return(+n||0).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:2});}catch(e){return String(+n||0);}}
+function minsToHours(m){const h=Math.floor((m||0)/60);const min=(m||0)%60;return h+'h '+min+'m';}
+function calcLogVal(l){return(l.tasks||[]).reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);}
+function calcLogMins(l){return(l.tasks||[]).reduce((a,t)=>a+(parseInt(t.duration)||0),0);}
+function updateClock(){
+  const n=new Date();
+  const c=document.getElementById('live-clock');
+  const d=document.getElementById('live-date');
+  if(c)c.textContent=n.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(d)d.textContent=n.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+function toggleTheme(){
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  DB.set('cwx_theme',t);
+}
+// Apply saved theme on load
+(()=>{const t=DB.get('cwx_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+
+// ========================================
+//  TAB NAVIGATION
+// ========================================
+function switchTab(tab){
+  ['dashboard','tasks','reports','staff','profile','kpi','guide'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el)el.style.display=t===tab?'block':'none';
+    const nav=document.getElementById('nav-'+t);
+    if(nav)nav.classList.toggle('active',t===tab);
+  });
+  if(tab==='staff')renderStaffList();
+  if(tab==='reports'){renderReportContent();document.getElementById('print-btn')&&(document.getElementById('print-btn').style.display='none');}
+  if(tab==='profile')renderProfile();
+  if(tab==='guide')renderGuide();
+  if(tab==='kpi')renderKpiTab();
+  if(tab==='tasks')renderTasks();
+}
 </script>
 </body>
 </html>
