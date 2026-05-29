@@ -690,7 +690,7 @@ function _initFirebase() {
   if (typeof firebase === 'undefined') {
     throw new Error('Firebase SDK did not load. Check your internet connection.');
   }
-  if (FIREBASE_CONFIG.apiKey === 'AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA') {
+  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || FIREBASE_CONFIG.apiKey === '') {
     throw new Error('CONFIG_NOT_SET');
   }
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);

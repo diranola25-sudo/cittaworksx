@@ -206,7 +206,7 @@ function _initFirebase() {
   if (typeof firebase === 'undefined') {
     throw new Error('Firebase SDK did not load. Check your internet connection.');
   }
-  if (FIREBASE_CONFIG.apiKey === 'AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA') {
+  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || FIREBASE_CONFIG.apiKey === '') {
     throw new Error('Firebase config not set. Open admin.html in a text editor and replace AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA, cittaworksx etc. with your real Firebase config values.');
   }
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
@@ -268,7 +268,7 @@ async function seedDefaultAdmin(){
 
 window.addEventListener('load', async ()=>{
   // Check if Firebase config was filled in
-  if(!_db || FIREBASE_CONFIG.apiKey === 'AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA'){
+  if(!_db || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || FIREBASE_CONFIG.apiKey === ''){
     hideLoading();
     const alertEl = document.getElementById('admin-login-alert');
     alertEl.className = 'alert alert-danger';
