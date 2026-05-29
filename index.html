@@ -19,7 +19,13 @@
 <style>
 /* Loading overlay */
 #cwx-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
-#cwx-loading.hidden{display:none!important;pointer-events:none!important;}
+#cwx-loading.hidden{display:none!important;pointer-events:none!important;visibility:hidden!important;}
+/* Company selection cards */
+#company-list [role="button"]{transition:border-color .15s,background .15s;}
+#company-list [role="button"]:hover{border-color:var(--accent)!important;background:var(--bg3)!important;}
+#company-list [role="button"]:active{transform:scale(.98);border-color:var(--accent)!important;}
+/* Ensure company-screen has no blocking children */
+#company-screen{position:relative;z-index:1;}
 .cwx-spinner{width:38px;height:38px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:cwxspin .8s linear infinite;}
 @keyframes cwxspin{to{transform:rotate(360deg);}}
 </style>
@@ -894,7 +900,7 @@ function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorag
 // ========================================
 async function renderCompanyScreen(){
   showScreen('company-screen');
-  hideLoading(); // always hide first — never block the screen
+  hideLoading();
   const list=document.getElementById('company-list');
   if(!list)return;
   if(!_firebaseReady){
@@ -904,24 +910,44 @@ async function renderCompanyScreen(){
   list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies...</p>';
   try{
     const companies=await getCompaniesAsync();
-    hideLoading(); // ensure hidden again after async
+    hideLoading();
     if(!companies.length){
       list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.</div>';
       return;
     }
     window._cwxCompanies=companies;
-    list.innerHTML=companies.map(function(co,idx){
+    // Build HTML — pure divs, no anchors, no buttons
+    // onclick is set as a string attribute calling a global window function directly
+    var html='';
+    for(var i=0;i<companies.length;i++){
+      var co=companies[i];
       var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       var bg=co.color||'rgba(0,212,170,.15)';
       var tc=co.textColor||'#00d4aa';
       var l=(co.name||'?').charAt(0).toUpperCase();
-      return '<a href="javascript:void(0)" onclick="_cwxPickCompany('+idx+');return false;" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin-bottom:.55rem;text-decoration:none;-webkit-tap-highlight-color:rgba(0,212,170,.2);">'
-        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
-        +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
-        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="pointer-events:none;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
-        +'</a>';
-    }).join('');
+      html+='<div role="button" tabindex="0" id="cwx-co-'+i+'" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin-bottom:.55rem;cursor:pointer;user-select:none;-webkit-user-select:none;">'
+           +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;pointer-events:none;">'+l+'</div>'
+           +'<div style="flex:1;min-width:0;pointer-events:none;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+           +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;pointer-events:none;"><path d="M9 18l6-6-6-6"/></svg>'
+           +'</div>';
+    }
+    list.innerHTML=html;
+    // Attach events AFTER innerHTML — both click and touchend for max compatibility
+    for(var j=0;j<companies.length;j++){
+      (function(idx){
+        var el=document.getElementById('cwx-co-'+idx);
+        if(!el)return;
+        var handler=function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          _cwxPickCompany(idx);
+        };
+        el.addEventListener('click',handler,false);
+        el.addEventListener('touchend',handler,{passive:false});
+        el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' ')handler(e);});
+      })(j);
+    }
   }catch(e){
     hideLoading();
     list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;font-size:13px;color:#ef4444;text-align:center;">Connection error: '+esc(e.message)+'</div>';
