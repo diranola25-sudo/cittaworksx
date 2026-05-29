@@ -597,7 +597,16 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-title">Assign KPI Target</div>
     <div id="kpi-target-alert" class="alert hidden"></div>
     <div class="form-group"><label>KPI <span class="req">*</span></label>
-      <select id="kt-kpi"><option value="">Select KPI</option></select></div>
+      <select id="kt-kpi" onchange="onKpiTargetKpiChange()"><option value="">Select KPI</option></select></div>
+    <!-- Unit + description shown dynamically after KPI selected -->
+    <div id="kt-kpi-context" style="display:none;background:var(--bg3);border-radius:8px;padding:.65rem .85rem;margin-bottom:.75rem;font-size:12px;line-height:1.7;">
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <span>Unit: <strong id="kt-unit-display" style="color:var(--accent);">—</strong></span>
+        <span>Frequency: <strong id="kt-freq-display" style="color:var(--text);">—</strong></span>
+        <span>Category: <strong id="kt-cat-display" style="color:var(--text);">—</strong></span>
+      </div>
+      <div id="kt-desc-display" style="color:var(--text3);margin-top:.25rem;"></div>
+    </div>
     <div class="form-group"><label>Assign To <span class="req">*</span></label>
       <select id="kt-assign-type" onchange="renderAssignToOptions()">
         <option value="staff">Individual Staff</option>
@@ -608,7 +617,11 @@ tr:last-child td{border-bottom:none;}
     <div class="form-group"><label>Select <span class="req">*</span></label>
       <select id="kt-assign-val"><option value="">Select…</option></select></div>
     <div class="form-row">
-      <div class="form-group"><label>Target Value <span class="req">*</span></label><input type="text" id="kt-target" placeholder="e.g. 500000"/></div>
+      <div class="form-group">
+        <label>Target Value <span class="req">*</span> <span id="kt-unit-hint" style="font-size:11px;color:var(--accent);font-weight:400;"></span></label>
+        <input type="text" id="kt-target" placeholder="Enter target value" inputmode="decimal"/>
+        <div id="kt-target-hint" style="font-size:11px;color:var(--text3);margin-top:.25rem;"></div>
+      </div>
       <div class="form-group"><label>Period (YYYY-MM) <span class="req">*</span></label><input type="month" id="kt-period"/></div>
     </div>
     <div style="display:flex;gap:.75rem;margin-top:.25rem;">
@@ -624,15 +637,31 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-handle"></div>
     <div class="modal-title">Self-Appraisal Submission</div>
     <div id="kpi-appraisal-alert" class="alert hidden"></div>
+    <!-- KPI context info card -->
     <div id="appraisal-kpi-info" style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-bottom:.9rem;font-size:13px;"></div>
-    <div class="form-group"><label>Actual Achievement <span class="req">*</span></label>
-      <input type="text" id="ka-actual" placeholder="Enter your actual result"/></div>
+    <!-- Actual achievement with unit-aware label and auto-score -->
+    <div class="form-group">
+      <label>Actual Achievement <span class="req">*</span> <span id="ka-unit-hint" style="font-size:11px;color:var(--accent);font-weight:400;"></span></label>
+      <input type="text" id="ka-actual" placeholder="Enter your actual result" inputmode="decimal" oninput="onAppraisalActualInput()"/>
+      <div id="ka-actual-hint" style="font-size:11px;color:var(--text3);margin-top:.25rem;"></div>
+    </div>
+    <!-- Auto-calculated score preview -->
+    <div id="ka-auto-score-box" style="display:none;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.65rem .85rem;margin-bottom:.85rem;font-size:13px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="color:var(--text2);">Auto-calculated achievement:</span>
+        <span id="ka-auto-score-val" style="font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:15px;"></span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:.2rem;">Based on Actual ÷ Target × 100. You may override the self-score below.</div>
+    </div>
     <div class="form-group"><label>Description of Activities <span class="req">*</span></label>
       <textarea id="ka-desc" rows="3" placeholder="Describe what you did and how you achieved it…"></textarea></div>
     <div class="form-group"><label>Supporting Evidence (link or note)</label>
       <input type="text" id="ka-evidence" placeholder="e.g. Google Drive link, invoice ref, report title"/></div>
-    <div class="form-group"><label>Self-Assessment Score (%) <span class="req">*</span></label>
-      <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100"/></div>
+    <div class="form-group">
+      <label>Self-Assessment Score (%) <span class="req">*</span></label>
+      <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100"/>
+      <div style="font-size:11px;color:var(--text3);margin-top:.25rem;">Enter your own score (0–100%). Auto-calculated score shown above as reference.</div>
+    </div>
     <div style="display:flex;gap:.75rem;margin-top:.25rem;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="saveAppraisalDraft()">Save Draft</button>
       <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="submitAppraisal()">Submit</button>
@@ -1862,6 +1891,82 @@ async function addAudit(cid,action,detail){
 // ========================================
 //  KPI SCORING ENGINE
 // ========================================
+// ── Unit helpers ────────────────────────────────────────────────────────────
+function unitLabel(unit){
+  switch(unit){
+    case 'currency': return '₦ Currency';
+    case 'percent':  return '% Percentage';
+    case 'yesno':    return 'Yes / No';
+    default:         return 'Number';
+  }
+}
+function unitPlaceholder(unit){
+  switch(unit){
+    case 'currency': return 'e.g. 500000';
+    case 'percent':  return 'e.g. 85  (number only, not %)';
+    case 'yesno':    return 'yes  or  no';
+    default:         return 'e.g. 120';
+  }
+}
+function unitHint(unit){
+  switch(unit){
+    case 'currency': return 'Enter amount in ₦ — numbers only, no commas or symbols';
+    case 'percent':  return 'Enter as a plain number, e.g. enter 85 to mean 85%';
+    case 'yesno':    return 'Enter "yes" if fully achieved, "no" if not';
+    default:         return 'Enter a plain number';
+  }
+}
+function calcAutoScore(actual, target, unit){
+  if(!target)return null;
+  if(unit==='yesno') return actual&&actual.trim().toLowerCase()==='yes'?100:0;
+  const a=parseFloat(String(actual).replace(/,/g,''));
+  const t=parseFloat(String(target).replace(/,/g,''));
+  if(isNaN(a)||isNaN(t)||t===0)return null;
+  return Math.min(100,Math.round(a/t*1000)/10);
+}
+
+// When manager selects a KPI in the Assign Target modal, show its unit context
+function onKpiTargetKpiChange(){
+  const kpiId=v('kt-kpi');
+  const ctx=document.getElementById('kt-kpi-context');
+  const unitHintEl=document.getElementById('kt-unit-hint');
+  const targetInput=document.getElementById('kt-target');
+  const targetHintEl=document.getElementById('kt-target-hint');
+  if(!kpiId){if(ctx)ctx.style.display='none';return;}
+  const defs=getKpiDefs(S.companyId);
+  const cats=getKpiCats(S.companyId);
+  const def=defs.find(d=>d.id===kpiId);
+  const cat=def?cats.find(c=>c.id===def.categoryId):null;
+  if(!def){if(ctx)ctx.style.display='none';return;}
+  if(ctx)ctx.style.display='block';
+  document.getElementById('kt-unit-display').textContent=unitLabel(def.unit);
+  document.getElementById('kt-freq-display').textContent=def.frequency?def.frequency.charAt(0).toUpperCase()+def.frequency.slice(1):'—';
+  document.getElementById('kt-cat-display').textContent=cat?cat.name:'—';
+  const descEl=document.getElementById('kt-desc-display');
+  if(descEl&&def.description)descEl.textContent=def.description;
+  if(unitHintEl)unitHintEl.textContent='· '+unitLabel(def.unit);
+  if(targetInput){targetInput.placeholder=unitPlaceholder(def.unit);}
+  if(targetHintEl)targetHintEl.textContent=unitHint(def.unit);
+}
+
+// When staff enters actual value in appraisal, auto-calculate % achieved
+function onAppraisalActualInput(){
+  const actual=v('ka-actual');
+  const modal=document.getElementById('modal-kpi-appraisal');
+  const targetVal=modal.dataset.targetValue;
+  const unit=modal.dataset.unit;
+  const box=document.getElementById('ka-auto-score-box');
+  const valEl=document.getElementById('ka-auto-score-val');
+  const scoreInput=document.getElementById('ka-selfscore');
+  if(!actual||!targetVal){if(box)box.style.display='none';return;}
+  const score=calcAutoScore(actual,targetVal,unit);
+  if(score===null){if(box)box.style.display='none';return;}
+  if(box)box.style.display='block';
+  if(valEl)valEl.textContent=score+'%';
+  // Auto-fill self-score only if user hasn't manually changed it
+  if(scoreInput&&!scoreInput.dataset.userEdited)scoreInput.value=score;
+}
+
 function calcKpiScore(actual,target,unit){
   if(!target||target===0)return 0;
   if(unit==='yesno')return actual==='yes'?100:0;
@@ -2491,9 +2596,13 @@ async function deleteKpiDef(id){
 // ========================================
 function openKpiTargetModal(){
   const defs=getKpiDefs(S.companyId);
-  document.getElementById('kt-kpi').innerHTML='<option value="">Select KPI</option>'+defs.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+  document.getElementById('kt-kpi').innerHTML='<option value="">Select KPI</option>'+defs.map(d=>`<option value="${d.id}">${esc(d.name)} — ${unitLabel(d.unit)}</option>`).join('');
   document.getElementById('kt-period').value=currentKpiPeriod();
   document.getElementById('kt-target').value='';
+  const ctx=document.getElementById('kt-kpi-context');
+  if(ctx)ctx.style.display='none';
+  const unitHintEl=document.getElementById('kt-unit-hint');
+  if(unitHintEl)unitHintEl.textContent='';
   hideAlert('kpi-target-alert');
   renderAssignToOptions();
   showModal('modal-kpi-target');
@@ -2534,21 +2643,56 @@ async function deleteKpiTarget(id){
 //  SELF-APPRAISAL
 // ========================================
 function openAppraisalModal(kpiId,targetId){
-  const def=getKpiDefs(S.companyId).find(d=>d.id===kpiId);
+  const defs=getKpiDefs(S.companyId);
+  const cats=getKpiCats(S.companyId);
+  const def=defs.find(d=>d.id===kpiId);
   const target=getKpiTargets(S.companyId).find(t=>t.id===targetId);
+  const cat=def?cats.find(c=>c.id===def.categoryId):null;
   const uid=S.user.staffId||S.user.id;
-  const existingPeriod=currentKpiPeriod();
-  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===uid&&a.period===existingPeriod);
+  const period=document.getElementById('kpi-appraise-period')?.value||currentKpiPeriod();
+  const existing=getKpiAppraisals(S.companyId).find(a=>a.kpiId===kpiId&&a.staffId===uid&&a.period===period);
   currentAppraisalId=existing?existing.id:null;
+
+  // Store unit + target on modal for auto-score calculation
+  const modal=document.getElementById('modal-kpi-appraisal');
+  modal.dataset.kpiId=kpiId;
+  modal.dataset.unit=def?def.unit:'number';
+  modal.dataset.targetValue=target?target.targetValue:'';
+
+  // Rich KPI context info panel
   document.getElementById('appraisal-kpi-info').innerHTML=`
-    <div style="font-weight:600;margin-bottom:.3rem;">${esc(def?def.name:'KPI')}</div>
-    <div style="color:var(--text3);">Target: ${esc(target?target.targetValue:'?')} · Unit: ${esc(def?def.unit:'')} · Period: ${currentKpiPeriod()}</div>`;
+    <div style="font-weight:700;font-size:14px;margin-bottom:.5rem;">${esc(def?def.name:'KPI')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem .75rem;font-size:12px;">
+      <div style="color:var(--text3);">Category</div><div style="font-weight:600;">${esc(cat?cat.name:'—')}</div>
+      <div style="color:var(--text3);">Unit</div><div style="font-weight:600;color:var(--accent);">${unitLabel(def?def.unit:'number')}</div>
+      <div style="color:var(--text3);">Target</div><div style="font-weight:700;color:var(--text);">${esc(target?target.targetValue:'Not set')} ${def&&def.unit==='currency'?'₦':def&&def.unit==='percent'?'%':''}</div>
+      <div style="color:var(--text3);">Period</div><div style="font-weight:600;">${period}</div>
+    </div>
+    ${def&&def.description?`<div style="margin-top:.5rem;font-size:12px;color:var(--text3);">${esc(def.description)}</div>`:''}`;
+
+  // Unit-specific input label and hint
+  const unitHintEl=document.getElementById('ka-unit-hint');
+  if(unitHintEl)unitHintEl.textContent='· '+unitLabel(def?def.unit:'number');
+  const actualHintEl=document.getElementById('ka-actual-hint');
+  if(actualHintEl)actualHintEl.textContent=unitHint(def?def.unit:'number');
+  const actualInput=document.getElementById('ka-actual');
+  if(actualInput)actualInput.placeholder=unitPlaceholder(def?def.unit:'number');
+
+  // Populate existing values
+  const autoBox=document.getElementById('ka-auto-score-box');
+  if(autoBox)autoBox.style.display='none';
+  const scoreInput=document.getElementById('ka-selfscore');
+  if(scoreInput)delete scoreInput.dataset.userEdited;
+
   document.getElementById('ka-actual').value=existing?existing.actualValue||'':'';
   document.getElementById('ka-desc').value=existing?existing.description||'':'';
   document.getElementById('ka-evidence').value=existing?existing.evidenceNote||'':'';
-  document.getElementById('ka-selfscore').value=existing?existing.selfScore||'':'';
+  if(scoreInput)scoreInput.value=existing&&existing.selfScore!=null?existing.selfScore:'';
+
+  // If editing, show auto-score for existing actual value
+  if(existing&&existing.actualValue)onAppraisalActualInput();
+
   hideAlert('kpi-appraisal-alert');
-  document.getElementById('modal-kpi-appraisal').dataset.kpiId=kpiId;
   showModal('modal-kpi-appraisal');
 }
 function saveAppraisalDraft(){saveAppraisalData('draft');}
@@ -2585,19 +2729,45 @@ function openKpiReviewModal(appraisalId){
   const a=appraisals.find(x=>x.id===appraisalId);if(!a)return;
   currentAppraisalId=appraisalId;
   const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
+  const cats=getKpiCats(S.companyId);
+  const cat=def?cats.find(c=>c.id===def.categoryId):null;
   const staff=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
   const target=getKpiTargets(S.companyId).find(t=>t.kpiId===a.kpiId&&t.period===a.period);
   const autoScore=target?calcKpiScore(a.actualValue,target.targetValue,def?def.unit:'number'):null;
+  const unit=def?def.unit:'number';
+  const unitSuffix=unit==='currency'?' ₦':unit==='percent'?'%':'';
+  // Achievement bar width
+  const pct=autoScore!==null?Math.min(100,autoScore):0;
+  const barColor=pct>=90?'var(--success)':pct>=75?'var(--accent)':pct>=60?'var(--warn)':'var(--danger)';
   document.getElementById('kpi-review-content').innerHTML=`
-    <div style="background:var(--bg3);border-radius:10px;padding:.9rem;margin-bottom:.75rem;">
-      <div style="font-weight:600;margin-bottom:.3rem;">${esc(staff?staff.name:a.staffId)} — ${esc(def?def.name:'?')}</div>
-      <div style="font-size:12px;color:var(--text3);">Period: ${a.period} · Target: ${esc(target?target.targetValue:'N/A')}</div>
-      <div style="margin-top:.6rem;font-size:13px;"><strong>Actual:</strong> ${esc(a.actualValue)}</div>
-      <div style="margin-top:.3rem;font-size:13px;"><strong>Activities:</strong> ${esc(a.description)}</div>
-      ${a.evidenceNote?`<div style="margin-top:.3rem;font-size:13px;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
-      <div style="margin-top:.3rem;font-size:13px;">Self-score: <strong>${a.selfScore}%</strong>${autoScore!==null?` · Auto-calculated: <strong>${autoScore}%</strong>`:''}</div>
+    <div style="background:var(--bg3);border-radius:12px;padding:1rem;margin-bottom:.75rem;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:.6rem;">${esc(staff?staff.name:a.staffId)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem .75rem;font-size:12px;margin-bottom:.75rem;">
+        <div style="color:var(--text3);">KPI</div><div style="font-weight:600;">${esc(def?def.name:'?')}</div>
+        <div style="color:var(--text3);">Category</div><div>${esc(cat?cat.name:'—')}</div>
+        <div style="color:var(--text3);">Unit</div><div style="color:var(--accent);font-weight:600;">${unitLabel(unit)}</div>
+        <div style="color:var(--text3);">Period</div><div>${a.period}</div>
+        <div style="color:var(--text3);">Target</div><div style="font-weight:700;">${esc(target?target.targetValue:'N/A')}${unitSuffix}</div>
+        <div style="color:var(--text3);">Actual</div><div style="font-weight:700;color:${barColor};">${esc(a.actualValue)}${unitSuffix}</div>
+      </div>
+      ${autoScore!==null?`
+      <div style="margin-bottom:.6rem;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:.3rem;">
+          <span style="color:var(--text3);">Achievement</span>
+          <span style="font-family:var(--font-mono);font-weight:700;color:${barColor};">${autoScore}%</span>
+        </div>
+        <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .5s;"></div>
+        </div>
+      </div>`:''}
+      <div style="font-size:13px;margin-top:.6rem;"><strong>Activities:</strong> ${esc(a.description)}</div>
+      ${a.evidenceNote?`<div style="font-size:12px;color:var(--text2);margin-top:.3rem;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
+      <div style="margin-top:.5rem;font-size:12px;display:flex;gap:1rem;">
+        <span>Staff self-score: <strong>${a.selfScore!=null?a.selfScore+'%':'—'}</strong></span>
+        ${autoScore!==null?`<span style="color:var(--text3);">Auto-calc: <strong>${autoScore}%</strong></span>`:''}
+      </div>
     </div>`;
-  document.getElementById('kr-score').value=autoScore||a.selfScore||'';
+  document.getElementById('kr-score').value=autoScore!==null?autoScore:(a.selfScore||'');
   document.getElementById('kr-comment').value='';
   hideAlert('kpi-review-alert');
   showModal('modal-kpi-review');
