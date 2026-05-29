@@ -40,8 +40,8 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg);color:va
 input,select,textarea,button{font-family:inherit;}
 a{color:var(--accent);text-decoration:none;}
 #app{min-height:100vh;}
-.screen{display:none;flex-direction:column;min-height:100vh;}
-.screen.active{display:flex;}
+.screen{display:none!important;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex!important;}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.25rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0;}
 .topbar-logo{display:flex;align-items:center;gap:10px;}
 .logo-mark{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:#0a0f1e;}
@@ -873,9 +873,10 @@ window.addEventListener('load',async()=>{
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
   updateClock();
+  showScreen('company-screen');
   await renderCompanyScreen();
   var rb=document.getElementById('refresh-btn');
-  if(rb)rb.onclick=()=>renderCompanyScreen();
+  if(rb)rb.onclick=async()=>{showScreen('company-screen');await renderCompanyScreen();};
   captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
 });
 
@@ -916,7 +917,6 @@ function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorag
 //  COMPANY SELECT — Firebase
 // ========================================
 async function renderCompanyScreen(){
-  showScreen('company-screen');
   hideLoading();
   const list=document.getElementById('company-list');
   if(!list)return;
@@ -972,20 +972,37 @@ async function renderCompanyScreen(){
 }
 
 function _cwxPickCompany(idx){
-  var co=(window._cwxCompanies||[])[idx];
-  if(!co)return;
+  var companies=window._cwxCompanies||[];
+  var co=companies[idx];
+  if(!co){
+    console.error('CWX: company not found at index',idx,'companies=',companies);
+    alert('Error: Company data not loaded. Please tap Refresh and try again.');
+    return;
+  }
   selectCompany(co.id,co);
 }
 
 function selectCompany(id,co){
-  if(!id||!co)return;
+  if(!id||!co){console.error('CWX selectCompany: missing id or co',id,co);return;}
   S.companyId=id;S.company=co;
-  document.getElementById('login-co-mark').textContent=(co.name||'C').charAt(0).toUpperCase();
-  document.getElementById('login-co-name').textContent=co.name||'CittaWorksX';
-  document.getElementById('login-id').value='';
-  document.getElementById('login-pw').value='';
+  var markEl=document.getElementById('login-co-mark');
+  var nameEl=document.getElementById('login-co-name');
+  var idEl=document.getElementById('login-id');
+  var pwEl=document.getElementById('login-pw');
+  if(markEl)markEl.textContent=(co.name||'C').charAt(0).toUpperCase();
+  if(nameEl)nameEl.textContent=co.name||'CittaWorksX';
+  if(idEl)idEl.value='';
+  if(pwEl)pwEl.value='';
   hideAlert('login-alert');
+  console.log('CWX: switching to login-screen for',co.name);
   showScreen('login-screen');
+  // Double-check screen switched
+  var ls=document.getElementById('login-screen');
+  if(ls&&!ls.classList.contains('active')){
+    console.error('CWX: showScreen failed! Forcing display.');
+    document.querySelectorAll('.screen').forEach(s=>s.style.display='none');
+    ls.style.display='flex';
+  }
 }
 
 
@@ -2611,6 +2628,29 @@ function renderGuide(){
 }
 
 // Close modals on overlay click
+// ========================================
+//  USER MENU & LOGOUT
+// ========================================
+function showUserMenu(){
+  const u=S.user;
+  if(!u)return;
+  document.getElementById('user-menu-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.1rem;">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent);">${initials(u.name||u.staffId||'?')}</div>
+      <div><div style="font-weight:600;">${esc(u.name||u.staffId)}</div><div style="font-size:12px;color:var(--text3);">${esc(u.staffId||'')} · ${esc(u.systemRole||'')}</div></div>
+    </div>
+    <button class="btn" style="width:100%;justify-content:center;margin-bottom:.5rem;" onclick="closeModal('modal-user-menu');switchTab('profile')">My Profile</button>
+    <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>`;
+  showModal('modal-user-menu');
+}
+
+async function doLogout(){
+  Object.assign(S,{companyId:null,company:null,user:null,signedIn:false,todayLog:null,tasks:[],_staff:[],_depts:[],_roles:[]});
+  closeModal('modal-user-menu');
+  showScreen('company-screen');
+  await renderCompanyScreen();
+}
+
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');});});
 
 // PWA
