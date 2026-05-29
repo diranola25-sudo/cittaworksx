@@ -169,8 +169,8 @@ tr:last-child td{border-bottom:none;}
 <body>
 <div id="app">
 
-<!-- Firebase Loading Overlay -->
-<div id="cwx-loading">
+<!-- Firebase Loading Overlay — starts hidden, shown only during async operations -->
+<div id="cwx-loading" class="hidden">
   <div style="width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:26px;color:#0a0f1e;">C</div>
   <div class="cwx-spinner"></div>
   <div style="font-size:13px;color:var(--text3);" id="cwx-loading-msg">Connecting to server…</div>
@@ -850,7 +850,6 @@ window.addEventListener('load',async()=>{
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
   updateClock();
-  showLoading('Connecting to server…');
   await renderCompanyScreen();
   var rb=document.getElementById('refresh-btn');
   if(rb)rb.onclick=()=>renderCompanyScreen();
@@ -895,7 +894,7 @@ function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorag
 // ========================================
 async function renderCompanyScreen(){
   showScreen('company-screen');
-  hideLoading();
+  hideLoading(); // always hide first — never block the screen
   const list=document.getElementById('company-list');
   if(!list)return;
   if(!_firebaseReady){
@@ -905,7 +904,7 @@ async function renderCompanyScreen(){
   list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies...</p>';
   try{
     const companies=await getCompaniesAsync();
-    hideLoading();
+    hideLoading(); // ensure hidden again after async
     if(!companies.length){
       list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.</div>';
       return;
