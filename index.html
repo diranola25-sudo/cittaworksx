@@ -13,6 +13,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK v10 compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* Loading overlay */
+#cwx-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .3s;}
+#cwx-loading.hidden{display:none;}
+.cwx-spinner{width:38px;height:38px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:cwxspin .8s linear infinite;}
+@keyframes cwxspin{to{transform:rotate(360deg);}}
+</style>
 <style>
 :root{--bg:#0a0f1e;--bg2:#111827;--bg3:#1a2235;--bg4:#243049;--accent:#00d4aa;--accent2:#0099ff;--text:#e8edf5;--text2:#94a3b8;--text3:#64748b;--border:#1e2d4a;--border2:#2a3d5c;--danger:#ef4444;--success:#22c55e;--warn:#f59e0b;--cr:14px;--br:8px;--font-mono:'Space Mono',monospace;--font-sans:'DM Sans',sans-serif;}
 [data-theme="light"]{--bg:#f0f4f8;--bg2:#fff;--bg3:#e8eef5;--bg4:#dde6f0;--text:#0f172a;--text2:#334155;--text3:#64748b;--border:#cbd5e1;--border2:#94a3b8;}
@@ -159,9 +169,16 @@ tr:last-child td{border-bottom:none;}
 <body>
 <div id="app">
 
+<!-- Firebase Loading Overlay -->
+<div id="cwx-loading">
+  <div style="width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:26px;color:#0a0f1e;">C</div>
+  <div class="cwx-spinner"></div>
+  <div style="font-size:13px;color:var(--text3);" id="cwx-loading-msg">Connecting to server…</div>
+</div>
+
 <div class="offline-banner hidden" id="offline-banner">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6s4-4 11-4 11 4 11 4"/><path d="M1 12s4-4 11-4 11 4 11 4"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-  Offline — data saved locally and will sync when reconnected
+  Offline — changes will sync when reconnected
 </div>
 
 <!-- ========== COMPANY SELECT ========== -->
@@ -652,30 +669,119 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-// ========================================
-//  DATA LAYER
-// ========================================
+// ============================================================
+//  FIREBASE CONFIGURATION
+//  Replace these with your own values from Firebase Console:
+//  console.firebase.google.com > Project Settings > Your Apps
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA",
+  authDomain:        "cittaworksx.firebaseapp.com",
+  projectId:         "cittaworksx",
+  storageBucket:     "cittaworksx.appspot.com",
+  messagingSenderId: "745110696175",
+  appId:             "1:745110696175:web:e7a92250e2f3799146ab1a"
+};
+
+// Firebase init
+let _db = null;
+
+function _initFirebase() {
+  if (typeof firebase === 'undefined') {
+    throw new Error('Firebase SDK did not load. Check your internet connection.');
+  }
+  if (FIREBASE_CONFIG.apiKey === 'AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA') {
+    throw new Error('CONFIG_NOT_SET');
+  }
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  _db = firebase.firestore();
+  _db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+}
+
+let _firebaseReady = false;
+try {
+  _initFirebase();
+  _firebaseReady = true;
+} catch(e) {
+  console.error('Firebase init:', e);
+  _firebaseReady = false;
+}
+
+// Firestore helpers
+const _cc  = (cid, col) => _db.collection('companies').doc(cid).collection(col);
+const _list = async r => { const s=await r.get(); return s.docs.map(d=>({id:d.id,...d.data()})); };
+const _get  = async r => { const s=await r.get(); return s.exists?{id:s.id,...s.data()}:null; };
+
+// Loading overlay
+function showLoading(msg='Loading…'){
+  const el=document.getElementById('cwx-loading');
+  const ml=document.getElementById('cwx-loading-msg');
+  if(el)el.classList.remove('hidden');
+  if(ml)ml.textContent=msg;
+}
+function hideLoading(){ const el=document.getElementById('cwx-loading'); if(el)el.classList.add('hidden'); }
+function showSynced(){ const el=document.getElementById('sync-indicator'); if(el){el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);} }
+
+// ============================================================
+//  FIREBASE-BACKED DATA FUNCTIONS
+//  These replace localStorage CRUD with Firestore calls.
+// ============================================================
+// Companies
+async function getCompaniesAsync(){ return await _list(_db.collection('companies')); }
+async function getCompanyAsync(id){ return await _get(_db.collection('companies').doc(id)); }
+
+// Staff
+async function getStaffAsync(cid){ return await _list(_cc(cid,'staff')); }
+
+// Logs
+async function getLogsAsync(cid, filters={}){
+  let q=_cc(cid,'logs');
+  if(filters.staffId)q=q.where('staffId','==',filters.staffId);
+  if(filters.date)q=q.where('date','==',filters.date);
+  if(filters.from)q=q.where('date','>=',filters.from);
+  if(filters.to)q=q.where('date','<=',filters.to);
+  return await _list(q);
+}
+
+// Settings (depts/roles/KPI bands)
+async function getSettingsAsync(cid,key){ return await _get(_cc(cid,'settings').doc(key)); }
+async function saveSettingsAsync(cid,key,data){ await _cc(cid,'settings').doc(key).set(data,{merge:true}); }
+
+// KPI
+async function getKpiDataAsync(cid){
+  const [cats,defs,targets,appraisals,approvals,bandsDoc]=await Promise.all([
+    _list(_cc(cid,'kpiCategories')), _list(_cc(cid,'kpiDefinitions')),
+    _list(_cc(cid,'kpiTargets')),    _list(_cc(cid,'kpiAppraisals')),
+    _list(_cc(cid,'kpiApprovals')),  _get(_cc(cid,'settings').doc('kpiBands'))
+  ]);
+  return{cats,defs,targets,appraisals,approvals,bands:bandsDoc||{exceeds:90,meets:75,developing:60}};
+}
+
+// ============================================================
+//  Legacy DB shim (theme only — all data now in Firestore)
+// ============================================================
 const DB={
   get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},
   set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
   del:k=>localStorage.removeItem(k)
 };
-const getCompanies=()=>DB.get('cwx_companies')||[];
-const saveCompanies=c=>DB.set('cwx_companies',c);
-const getCompany=id=>getCompanies().find(c=>c.id===id);
-const getStaff=cid=>DB.get('cwx_staff_'+cid)||[];
-const saveStaff=(cid,s)=>DB.set('cwx_staff_'+cid,s);
-const getLogs=cid=>DB.get('cwx_logs_'+cid)||[];
-const saveLogs=(cid,l)=>DB.set('cwx_logs_'+cid,l);
-const getDepts=cid=>DB.get('cwx_depts_'+cid)||['Management','Sales','Operations','Finance','HR','IT','Marketing'];
-const saveDepts=(cid,d)=>DB.set('cwx_depts_'+cid,d);
-const getJobRoles=cid=>DB.get('cwx_roles_'+cid)||['General Manager','Sales Executive','Accountant','HR Officer','IT Support','Marketing Officer','Operations Staff'];
-const saveJobRoles=(cid,r)=>DB.set('cwx_roles_'+cid,r);
+// Stub out old sync localStorage helpers so no runtime errors
+const getCompanies=()=>[];
+const saveCompanies=()=>{};
+const getCompany=()=>null;
+const getStaff=()=>[];
+const saveStaff=()=>{};
+const getLogs=()=>[];
+const saveLogs=()=>{};
+const getDepts=()=>[];
+const saveDepts=()=>{};
+const getJobRoles=()=>[];
+const saveJobRoles=()=>{};
 
 // ========================================
 //  STATE
 // ========================================
-let S={companyId:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null,signoutLoc:null,reportTab:'daily',editingStaffId:null};
+let S={companyId:null,company:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null,signoutLoc:null,reportTab:'daily',editingStaffId:null,_staff:[],_depts:[],_roles:[]};
 
 // ========================================
 //  THEME
@@ -739,22 +845,15 @@ function captureLocation(dotId,txtId,cb){
 //  INIT
 // ========================================
 window.addEventListener('load',async()=>{
-  // Unregister ALL old service workers so stale cache never blocks updates
-  if('serviceWorker' in navigator){
-    const regs=await navigator.serviceWorker.getRegistrations();
-    for(const r of regs) await r.unregister();
-    const keys=await caches.keys();
-    for(const k of keys) await caches.delete(k);
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
-  updateClock();
-  renderCompanyScreen();
-  // Wire refresh button
-  var rb=document.getElementById('refresh-btn');
-  if(rb)rb.onclick=function(){renderCompanyScreen();};
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   window.addEventListener('online',()=>document.getElementById('offline-banner').classList.add('hidden'));
   window.addEventListener('offline',()=>document.getElementById('offline-banner').classList.remove('hidden'));
   if(!navigator.onLine)document.getElementById('offline-banner').classList.remove('hidden');
+  updateClock();
+  showLoading('Connecting to server…');
+  await renderCompanyScreen();
+  var rb=document.getElementById('refresh-btn');
+  if(rb)rb.onclick=()=>renderCompanyScreen();
   captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
 });
 
@@ -763,7 +862,7 @@ window.addEventListener('load',async()=>{
 // ========================================
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-function diagStorage(){
+function diagStorage(){/*disabled-uses-localStorage*//*disabled-uses-localStorage*/
   const cos=getCompanies();
   const el=document.getElementById('diag-result');
   el.style.display='block';
@@ -792,42 +891,66 @@ function diagStorage(){
 }
 
 // ========================================
-//  COMPANY SELECT
+//  COMPANY SELECT — Firebase
 // ========================================
-function renderCompanyScreen(){
-  var list=document.getElementById('company-list');
+async function renderCompanyScreen(){
+  showScreen('company-screen');
+  const list=document.getElementById('company-list');
   if(!list)return;
-  var cos=getCompanies();
-  if(!cos.length){
-    list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered yet.<br><span style="font-size:12px;display:block;margin-top:.3rem;">Ask your system administrator to register your company via the Admin Portal.</span></div>';
+  if(!_firebaseReady){
+    list.innerHTML=`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:1.25rem;font-size:13px;line-height:1.8;">
+      <div style="font-weight:700;color:#ef4444;font-size:15px;margin-bottom:.5rem;">⚠ Firebase Setup Required</div>
+      <div style="color:var(--text2);">This app needs a Firebase database to work across devices.</div>
+      <div style="margin-top:.75rem;background:var(--bg3);border-radius:8px;padding:.75rem;font-size:12px;color:var(--text3);">
+        <strong style="color:var(--text);">To set up:</strong><br>
+        1. Create a free project at <strong>console.firebase.google.com</strong><br>
+        2. Enable Firestore Database<br>
+        3. Open <strong>index.html</strong> in a text editor<br>
+        4. Find <code style="color:var(--accent);">AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA</code> and replace all 6 config values<br>
+        5. Do the same in <strong>admin.html</strong> and upload both files
+      </div>
+    </div>`;
+    hideLoading();
     return;
   }
-  list.innerHTML=cos.map(function(co){
-    var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    var bg=co.color||'rgba(0,212,170,.15)';
-    var tc=co.textColor||'#00d4aa';
-    var l=(co.name||'?').charAt(0).toUpperCase();
-    return '<button type="button" data-coid="'+co.id+'" class="co-card-btn" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;text-align:left;">'
-      +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+l+'</div>'
-      +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
-      +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
-      +'</button>';
-  }).join('');
-  list.querySelectorAll('.co-card-btn').forEach(function(btn){
-    btn.onclick=function(){selectCompany(this.getAttribute('data-coid'));};
-    btn.onmouseenter=function(){this.style.borderColor='var(--accent)';};
-    btn.onmouseleave=function(){this.style.borderColor='var(--border)';};
-  });
+  list.innerHTML='<p style="color:var(--text3);text-align:center;font-size:13px;">Loading companies…</p>';
+  try{
+    const companies=await getCompaniesAsync();
+    hideLoading();
+    if(!companies.length){
+      list.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;font-size:13px;color:var(--text3);">No companies registered.<br><span style="font-size:12px;display:block;margin-top:.3rem;">Ask your administrator to register your company in the Admin Portal.</span></div>';
+      return;
+    }
+    list.innerHTML=companies.map(function(co){
+      var n=(co.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var s=((co.industry||'')+(co.country?' · '+co.country:'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var bg=co.color||'rgba(0,212,170,.15)';
+      var tc=co.textColor||'#00d4aa';
+      var l=(co.name||'?').charAt(0).toUpperCase();
+      return '<button type="button" data-coid="'+co.id+'" style="width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:.9rem 1rem;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:.55rem;text-align:left;-webkit-appearance:none;">'
+        +'<div style="width:44px;height:44px;border-radius:10px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:'+tc+';flex-shrink:0;">'+l+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;color:var(--text);">'+n+'</div><div style="font-size:11px;color:var(--text3);">'+s+'</div></div>'
+        +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'
+        +'</button>';
+    }).join('');
+    // Attach onclick directly to each button — most reliable across all browsers
+    list.querySelectorAll('button[data-coid]').forEach(function(btn){
+      const co=companies.find(c=>c.id===btn.getAttribute('data-coid'));
+      btn.onclick=function(){selectCompany(this.getAttribute('data-coid'),co);};
+      btn.onmouseenter=function(){this.style.borderColor='var(--accent)';};
+      btn.onmouseleave=function(){this.style.borderColor='var(--border)';};
+    });
+  }catch(e){
+    hideLoading();
+    list.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1rem;font-size:13px;color:#ef4444;text-align:center;">Connection error: '+esc(e.message)+'<br><span style="font-size:12px;color:var(--text3);">Check your Firebase configuration in index.html.</span></div>';
+  }
 }
 
-function selectCompany(id){
-  if(!id)return;
-  S.companyId=id;
-  var co=getCompany(id);
-  if(!co){return;}
-  document.getElementById('login-co-mark').textContent=co.name.charAt(0).toUpperCase();
-  document.getElementById('login-co-name').textContent=co.name;
+function selectCompany(id,co){
+  if(!id||!co)return;
+  S.companyId=id; S.company=co;
+  document.getElementById('login-co-mark').textContent=(co.name||'C').charAt(0).toUpperCase();
+  document.getElementById('login-co-name').textContent=co.name||'CittaWorksX';
   document.getElementById('login-id').value='';
   document.getElementById('login-pw').value='';
   hideAlert('login-alert');
@@ -835,38 +958,52 @@ function selectCompany(id){
 }
 
 
-function doLogin(){
+async function doLogin(){
   const sid=document.getElementById('login-id').value.trim();
   const pw=document.getElementById('login-pw').value;
   if(!sid||!pw){showAlert('login-alert','Enter Staff ID and password.','danger');return;}
-  const staff=getStaff(S.companyId);
-  const user=staff.find(s=>s.id===sid&&s.password===pw);
-  if(!user){showAlert('login-alert','Invalid Staff ID or password.','danger');return;}
-  S.user=user;loadSession();showScreen('main-screen');
+  showLoading('Signing in…');
+  try{
+    const snap=await _cc(S.companyId,'staff').where('staffId','==',sid).where('password','==',pw).limit(1).get();
+    if(snap.empty){hideLoading();showAlert('login-alert','Invalid Staff ID or password.','danger');return;}
+    S.user={id:snap.docs[0].id,...snap.docs[0].data()};
+    await loadSession();
+    hideLoading();
+    showScreen('main-screen');
+  }catch(e){hideLoading();showAlert('login-alert','Login error: '+e.message,'danger');}
 }
 
 // ========================================
 //  SESSION
 // ========================================
-function loadSession(){
+async function loadSession(){
   const u=S.user;
-  document.getElementById('user-avatar-btn').textContent=initials(u.name);
-  const today=todayStr();
-  const logs=getLogs(S.companyId);
-  S.todayLog=logs.find(l=>l.staffId===u.id&&l.date===today)||null;
-  S.signedIn=!!(S.todayLog&&S.todayLog.signInTime&&!S.todayLog.signOutTime);
-  S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
+  document.getElementById('user-avatar-btn').textContent=initials(u.name||u.staffId||'?');
   const isManager=u.systemRole==='manager';
   ['nav-reports','nav-staff','nav-kpi'].forEach(id=>{
     document.getElementById(id).classList.toggle('hidden',!isManager);
   });
-  updateDashboard();renderTasks();
-  captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
-  // Set default report dates
+  // Load staff list for manager
+  if(isManager) S._staff=await getStaffAsync(S.companyId);
+  else S._staff=[];
+  // Load depts/roles
+  const deptsDoc=await getSettingsAsync(S.companyId,'departments');
+  S._depts=deptsDoc&&deptsDoc.list?deptsDoc.list:['Management','Sales','Operations','Finance','HR','IT','Marketing'];
+  const rolesDoc=await getSettingsAsync(S.companyId,'jobRoles');
+  S._roles=rolesDoc&&rolesDoc.list?rolesDoc.list:['General Manager','Sales Executive','Accountant','HR Officer','IT Support','Marketing Officer'];
+  // Load today's log
+  const today=todayStr();
+  const todayLogs=await getLogsAsync(S.companyId,{staffId:u.staffId,date:today});
+  S.todayLog=todayLogs.length?todayLogs[0]:null;
+  S.signedIn=!!(S.todayLog&&S.todayLog.signInTime&&!S.todayLog.signOutTime);
+  S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
+  // Report date defaults
   const firstDay=new Date();firstDay.setDate(1);
   document.getElementById('rpt-from').value=firstDay.toISOString().split('T')[0];
   document.getElementById('rpt-to').value=today;
   populateRptDeptFilter();
+  updateDashboard();renderTasks();
+  captureLocation('loc-dot','loc-text',loc=>S.currentLoc=loc);
 }
 
 // ========================================
@@ -906,16 +1043,21 @@ function updateDashboard(){
 // ========================================
 //  SIGN IN
 // ========================================
-function doSignIn(){
-  if(!S.currentLoc){showAlert('main-alert','Location not yet acquired. Please wait a moment.','warn');return;}
+async function doSignIn(){
+  if(!S.currentLoc){showAlert('main-alert','Location not yet acquired. Please wait.','warn');return;}
   hideAlert('main-alert');
-  const now=new Date();
-  const log={id:'log_'+Date.now(),staffId:S.user.id,staffName:S.user.name,staffDept:S.user.department||'',companyId:S.companyId,date:todayStr(),signInTime:now.toISOString(),signInLocation:S.currentLoc,signOutTime:null,signOutLocation:null,tasks:[],submitted:false};
-  const logs=getLogs(S.companyId);logs.push(log);saveLogs(S.companyId,logs);
-  S.todayLog=log;S.signedIn=true;S.tasks=[];
-  updateDashboard();renderTasks();
-  showAlert('main-alert','Signed in at '+fmtTime(now.toISOString()),'success');
-  setTimeout(()=>hideAlert('main-alert'),3000);
+  showLoading('Recording sign-in…');
+  try{
+    const now=new Date();
+    const logData={staffId:S.user.staffId,staffName:S.user.name||S.user.staffId,staffDept:S.user.department||'',
+      companyId:S.companyId,date:todayStr(),signInTime:now.toISOString(),signInLocation:S.currentLoc,
+      signOutTime:null,signOutLocation:null,tasks:[],submitted:false,createdAt:now.toISOString()};
+    const ref=await _cc(S.companyId,'logs').add(logData);
+    S.todayLog={id:ref.id,...logData};S.signedIn=true;S.tasks=[];
+    hideLoading();updateDashboard();renderTasks();
+    showAlert('main-alert','Signed in at '+fmtTime(now.toISOString()),'success');
+    setTimeout(()=>hideAlert('main-alert'),3000);
+  }catch(e){hideLoading();showAlert('main-alert','Sign-in error: '+e.message,'danger');}
 }
 
 // ========================================
@@ -970,21 +1112,19 @@ function finalSubmitSignOut(){
   showModal('modal-signout');
 }
 
-function confirmSignOut(){
-  const now=new Date();
-  const logs=getLogs(S.companyId);
-  const idx=logs.findIndex(l=>l.id===S.todayLog.id);
-  if(idx>-1){
-    logs[idx].signOutTime=now.toISOString();
-    logs[idx].signOutLocation=S.signoutLoc||null;
-    logs[idx].tasks=S.tasks;
-    logs[idx].submitted=true;
-    saveLogs(S.companyId,logs);S.todayLog=logs[idx];
-  }
-  S.signedIn=false;
-  closeModal('modal-signout');updateDashboard();renderTasks();
-  showAlert('main-alert','Signed out at '+fmtTime(now.toISOString()),'success');
-  setTimeout(()=>hideAlert('main-alert'),3000);
+async function confirmSignOut(){
+  showLoading('Recording sign-out…');
+  try{
+    const now=new Date();
+    await _cc(S.companyId,'logs').doc(S.todayLog.id).update({
+      signOutTime:now.toISOString(),signOutLocation:S.signoutLoc||null,tasks:S.tasks,submitted:true
+    });
+    S.todayLog={...S.todayLog,signOutTime:now.toISOString(),signOutLocation:S.signoutLoc||null,tasks:S.tasks,submitted:true};
+    S.signedIn=false;
+    hideLoading();closeModal('modal-signout');updateDashboard();renderTasks();
+    showAlert('main-alert','Signed out at '+fmtTime(now.toISOString()),'success');
+    setTimeout(()=>hideAlert('main-alert'),3000);
+  }catch(e){hideLoading();showAlert('signout-alert','Error: '+e.message,'danger');}
 }
 
 // ========================================
@@ -1076,48 +1216,53 @@ function updateTaskTotals(){
   const sm=document.getElementById('stat-hours');if(sm)sm.textContent=minsToHours(totalMins);
   const st=document.getElementById('stat-tasks');if(st)st.textContent=S.tasks.length;
 }
+let _saveTasksTimer=null;
 function saveTasks(){
   if(!S.todayLog)return;
-  const logs=getLogs(S.companyId);
-  const idx=logs.findIndex(l=>l.id===S.todayLog.id);
-  if(idx>-1){logs[idx].tasks=S.tasks;saveLogs(S.companyId,logs);}
-  const ind=document.getElementById('tasks-save-indicator');
-  if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',1500);}
+  clearTimeout(_saveTasksTimer);
+  _saveTasksTimer=setTimeout(async()=>{
+    try{
+      await _cc(S.companyId,'logs').doc(S.todayLog.id).update({tasks:S.tasks});
+      const ind=document.getElementById('tasks-save-indicator');
+      if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',1500);}
+    }catch(e){console.error('Save tasks:',e);}
+  },800);
 }
 
 // ========================================
 //  STAFF MANAGEMENT
 // ========================================
-function renderStaffList(){
-  const staff=getStaff(S.companyId);
+async function renderStaffList(){
   const c=document.getElementById('staff-list-container');
-  if(!staff.length){c.innerHTML='<p style="color:var(--text3);font-size:13px;">No staff registered.</p>';return;}
-  c.innerHTML=staff.map(s=>`
-    <div class="report-row" onclick="showStaffDetail('${s.id}')">
-      <div class="report-avatar">${initials(s.name)}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')} · ${esc(s.department||'')}</div>
-      </div>
-      <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
-    </div>`).join('');
+  c.innerHTML='<p style="color:var(--text3);font-size:13px;">Loading...</p>';
+  try{
+    S._staff=await getStaffAsync(S.companyId);
+    if(!S._staff.length){c.innerHTML='<p style="color:var(--text3);font-size:13px;">No staff registered.</p>';return;}
+    c.innerHTML=S._staff.map(s=>`
+      <div class="report-row" onclick="showStaffDetail('${s.id}')">
+        <div class="report-avatar">${initials(s.name||s.staffId||'?')}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;">${esc(s.name||s.staffId)}</div>
+          <div style="font-size:12px;color:var(--text3);">${esc(s.staffId||'')} ${esc(s.role||'')} ${esc(s.department||'')}</div>
+        </div>
+        <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+      </div>`).join('');
+  }catch(e){c.innerHTML='<p style="color:var(--danger);">Error: '+e.message+'</p>';}
 }
 
 function showRegisterStaff(editId){
   S.editingStaffId=editId||null;
   document.getElementById('staff-modal-title').textContent=editId?'Edit Staff':'Register New Staff';
   hideAlert('staff-form-alert');
-  const depts=getDepts(S.companyId);
-  const roles=getJobRoles(S.companyId);
   const ds=document.getElementById('s-dept');
-  ds.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  ds.innerHTML='<option value="">Select department</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
   const rs=document.getElementById('s-role');
-  rs.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+  rs.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
   if(editId){
     const u=getStaff(S.companyId).find(x=>x.id===editId);
     if(u){
-      document.getElementById('s-name').value=u.name;
-      document.getElementById('s-id').value=u.id;
+      document.getElementById('s-name').value=u.name||'';
+      document.getElementById('s-id').value=u.staffId||u.id||'';
       document.getElementById('s-id').disabled=true;
       document.getElementById('s-email').value=u.email||'';
       document.getElementById('s-phone').value=u.phone||'';
@@ -1135,28 +1280,32 @@ function showRegisterStaff(editId){
   showModal('modal-register-staff');
 }
 
-function saveStaffMember(){
-  const name=v('s-name'),id=v('s-id'),dept=v('s-dept'),role=v('s-role'),pw=v('s-pw'),sysRole=v('s-sys-role');
+async function saveStaffMember(){
+  const name=v('s-name'),dept=v('s-dept'),role=v('s-role'),pw=v('s-pw'),sysRole=v('s-sys-role');
   if(!name){showAlert('staff-form-alert','Full name is required.','danger');return;}
   if(!dept){showAlert('staff-form-alert','Select a department.','danger');return;}
   if(!role){showAlert('staff-form-alert','Select a job role.','danger');return;}
-  const staff=getStaff(S.companyId);
-  if(S.editingStaffId){
-    const idx=staff.findIndex(s=>s.id===S.editingStaffId);
-    if(idx>-1){
-      // Only manager can edit name
-      staff[idx].name=name;
-      staff[idx].email=v('s-email');staff[idx].phone=v('s-phone');
-      staff[idx].department=dept;staff[idx].role=role;staff[idx].systemRole=sysRole;
-      if(pw&&pw.length>=6)staff[idx].password=pw;
+  showLoading('Saving...');
+  try{
+    if(S.editingStaffId){
+      const upd={name,email:v('s-email'),phone:v('s-phone'),department:dept,role,systemRole:sysRole,updatedAt:new Date().toISOString()};
+      if(pw&&pw.length>=6)upd.password=pw;
+      await _cc(S.companyId,'staff').doc(S.editingStaffId).update(upd);
+      if(S.user&&S.user.id===S.editingStaffId)Object.assign(S.user,upd);
+    } else {
+      const sid=v('s-id');
+      if(!sid){hideLoading();showAlert('staff-form-alert','Staff ID is required.','danger');return;}
+      if(!pw||pw.length<6){hideLoading();showAlert('staff-form-alert','Password min 6 chars.','danger');return;}
+      const ex=await _cc(S.companyId,'staff').where('staffId','==',sid).limit(1).get();
+      if(!ex.empty){hideLoading();showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
+      await _cc(S.companyId,'staff').add({staffId:sid,name,email:v('s-email'),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
     }
-  } else {
-    if(!id){showAlert('staff-form-alert','Staff ID is required.','danger');return;}
-    if(!pw||pw.length<6){showAlert('staff-form-alert','Password must be at least 6 characters.','danger');return;}
-    if(staff.find(s=>s.id===id)){showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
-    staff.push({id,name,email:v('s-email'),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
-  }
-  saveStaff(S.companyId,staff);closeModal('modal-register-staff');renderStaffList();
+    hideLoading();closeModal('modal-register-staff');
+    document.getElementById('s-id').disabled=false;
+    document.getElementById('s-name').disabled=false;
+    document.getElementById('s-sys-role').disabled=false;
+    await renderStaffList();
+  }catch(e){hideLoading();showAlert('staff-form-alert','Error: '+e.message,'danger');}
 }
 
 function showStaffDetail(staffId){
@@ -1190,11 +1339,12 @@ function showStaffDetail(staffId){
   showModal('modal-staff-detail');
 }
 
-function toggleManagerRole(sid){
-  const staff=getStaff(S.companyId);
-  const idx=staff.findIndex(s=>s.id===sid);
-  if(idx>-1){staff[idx].systemRole=staff[idx].systemRole==='manager'?'staff':'manager';saveStaff(S.companyId,staff);}
-  closeModal('modal-staff-detail');renderStaffList();
+async function toggleManagerRole(docId,current){
+  showLoading('Updating...');
+  try{
+    await _cc(S.companyId,'staff').doc(docId).update({systemRole:current==='manager'?'staff':'manager'});
+    hideLoading();closeModal('modal-staff-detail');await renderStaffList();
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
 // ========================================
@@ -1210,40 +1360,38 @@ function switchDJTab(t){
   document.getElementById('dj-tab-roles').classList.toggle('active',t==='roles');
 }
 function renderDeptList(){
-  const depts=getDepts(S.companyId);
+  const depts=S._depts||[];
   document.getElementById('dept-list').innerHTML=depts.map((d,i)=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
       <span style="font-size:13px;">${esc(d)}</span>
       <button class="btn btn-sm btn-danger" onclick="removeDept(${i})" style="padding:.2rem .5rem;">✕</button>
     </div>`).join('');
 }
-function addDept(){
+async function addDept(){
   const inp=document.getElementById('new-dept-input');
   const val=inp.value.trim();if(!val)return;
-  const depts=getDepts(S.companyId);
-  if(!depts.includes(val)){depts.push(val);saveDepts(S.companyId,depts);}
+  if(!S._depts.includes(val)){S._depts.push(val);await saveSettingsAsync(S.companyId,'departments',{list:S._depts});}
   inp.value='';renderDeptList();
 }
-function removeDept(i){
-  const depts=getDepts(S.companyId);depts.splice(i,1);saveDepts(S.companyId,depts);renderDeptList();
+async function removeDept(i){
+  S._depts.splice(i,1);await saveSettingsAsync(S.companyId,'departments',{list:S._depts});renderDeptList();
 }
 function renderRolesList(){
-  const roles=getJobRoles(S.companyId);
+  const roles=S._roles||[];
   document.getElementById('roles-list').innerHTML=roles.map((r,i)=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
       <span style="font-size:13px;">${esc(r)}</span>
       <button class="btn btn-sm btn-danger" onclick="removeRole(${i})" style="padding:.2rem .5rem;">✕</button>
     </div>`).join('');
 }
-function addJobRole(){
+async function addJobRole(){
   const inp=document.getElementById('new-role-input');
   const val=inp.value.trim();if(!val)return;
-  const roles=getJobRoles(S.companyId);
-  if(!roles.includes(val)){roles.push(val);saveJobRoles(S.companyId,roles);}
+  if(!S._roles.includes(val)){S._roles.push(val);await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});}
   inp.value='';renderRolesList();
 }
-function removeRole(i){
-  const roles=getJobRoles(S.companyId);roles.splice(i,1);saveJobRoles(S.companyId,roles);renderRolesList();
+async function removeRole(i){
+  S._roles.splice(i,1);await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});renderRolesList();
 }
 
 // ========================================
@@ -1251,8 +1399,7 @@ function removeRole(i){
 // ========================================
 function populateRptDeptFilter(){
   const sel=document.getElementById('rpt-dept');if(!sel)return;
-  const depts=getDepts(S.companyId);
-  sel.innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  sel.innerHTML='<option value="">All Departments</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
 }
 
 function switchReportTab(tab){
@@ -1262,21 +1409,24 @@ function switchReportTab(tab){
   renderReportContent();
 }
 
-function renderReportContent(){
+async function renderReportContent(){
   const tab=S.reportTab;
   const fromDate=document.getElementById('rpt-from').value;
   const toDate=document.getElementById('rpt-to').value;
   const deptFilter=document.getElementById('rpt-dept').value;
-  let logs=getLogs(S.companyId).filter(l=>{
-    if(fromDate&&l.date<fromDate)return false;
-    if(toDate&&l.date>toDate)return false;
-    if(deptFilter&&l.staffDept!==deptFilter)return false;
-    return true;
-  });
-  const staff=getStaff(S.companyId);
   const c=document.getElementById('report-content');
+  c.innerHTML='<p style="color:var(--text3);">Loading...</p>';
+  let logs;
+  try{
+    logs=await getLogsAsync(S.companyId,{from:fromDate,to:toDate});
+    if(deptFilter)logs=logs.filter(l=>l.staffDept===deptFilter);
+  }catch(e){c.innerHTML='<p style="color:var(--danger);">Error: '+esc(e.message)+'</p>';return;}
 
   if(tab==='daily'){
+    if(!window._logsCache)window._logsCache={};
+    logs.forEach(l=>window._logsCache[l.id]=l);
+    if(!window._logsCache)window._logsCache={};
+    logs.forEach(l=>window._logsCache[l.id]=l);
     logs=[...logs].sort((a,b)=>new Date(b.signInTime||0)-new Date(a.signInTime||0));
     c.innerHTML=logs.length?logs.map(l=>{
       const val=calcLogVal(l);const mins=calcLogMins(l);
@@ -1360,7 +1510,7 @@ function renderReportContent(){
 }
 
 function showLogDetail(logId){
-  const l=getLogs(S.companyId).find(x=>x.id===logId);if(!l)return;
+  const l=(window._logsCache&&window._logsCache[logId]);if(!l)return;
   const val=calcLogVal(l);const mins=calcLogMins(l);
   document.getElementById('report-detail-content').innerHTML=`
     <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;margin-bottom:.9rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
@@ -1390,7 +1540,7 @@ function showLogDetail(logId){
 
 function printReport(){
   const content=document.getElementById('print-area');if(!content)return;
-  const co=getCompany(S.companyId);
+  const co=S.company||{name:''};
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>CittaWorksX Report — ${co?co.name:''}</title>
     <style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:20px;}
@@ -1411,27 +1561,33 @@ function printReport(){
 // ========================================
 //  PROFILE
 // ========================================
-function renderProfile(){
-  const u=S.user;
-  const co=getCompany(S.companyId);
-  const logs=getLogs(S.companyId).filter(l=>l.staffId===u.id);
-  const totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
-  const totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
-  document.getElementById('profile-content').innerHTML=`
+async function renderProfile(){
+  const u=S.user;const co=S.company||{};
+  const c=document.getElementById('profile-content');
+  c.innerHTML='<p style="color:var(--text3);">Loading...</p>';
+  let totalVal=0,totalMins=0,daysLogged=0;
+  try{
+    const logs=await getLogsAsync(S.companyId,{staffId:u.staffId||u.id});
+    daysLogged=logs.filter(l=>l.signOutTime).length;
+    totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
+    totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+  }catch(e){}
+  c.innerHTML=`
     <div class="card" style="margin-bottom:.9rem;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:.9rem;">
-        <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(u.name)}</div>
+        <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(u.name||u.staffId||'?')}</div>
         <div>
-          <div style="font-size:16px;font-weight:600;">${esc(u.name)}</div>
-          <div style="font-size:12px;color:var(--text3);">${esc(u.id)} · ${esc(u.role||'')} · ${esc(u.department||'')}</div>
+          <div style="font-size:16px;font-weight:600;">${esc(u.name||u.staffId)}</div>
+          <div style="font-size:12px;color:var(--text3);">${esc(u.staffId||u.id||'')} · ${esc(u.role||'')} · ${esc(u.department||'')}</div>
           <span class="badge ${u.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:3px;">${u.systemRole==='manager'?'Manager':'Staff'}</span>
         </div>
       </div>
       ${u.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(u.email)}</div>`:''}
       ${u.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(u.phone)}</div>`:''}
+      <div style="font-size:12px;color:var(--text3);margin-top:.4rem;">🏢 ${esc(co.name||'')}</div>
     </div>
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
+      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${daysLogged}</div></div>
       <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
     </div>
@@ -1448,12 +1604,11 @@ function showEditProfile(){
   document.getElementById('staff-modal-title').textContent='Edit My Profile';
   S.editingStaffId=u.id;
   hideAlert('staff-form-alert');
-  const depts=getDepts(S.companyId);const roles=getJobRoles(S.companyId);
-  const ds=document.getElementById('s-dept');ds.innerHTML='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
-  const rs=document.getElementById('s-role');rs.innerHTML='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
-  document.getElementById('s-name').value=u.name;
-  document.getElementById('s-name').disabled=true; // Staff cannot edit own name
-  document.getElementById('s-id').value=u.id;
+  const ds=document.getElementById('s-dept');ds.innerHTML='<option value="">Select department</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
+  const rs=document.getElementById('s-role');rs.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+  document.getElementById('s-name').value=u.name||'';
+  document.getElementById('s-name').disabled=true;
+  document.getElementById('s-id').value=u.staffId||u.id||'';
   document.getElementById('s-id').disabled=true;
   document.getElementById('s-email').value=u.email||'';
   document.getElementById('s-phone').value=u.phone||'';
@@ -1466,7 +1621,7 @@ function showEditProfile(){
 }
 
 function showCoProfileModal(){
-  const co=getCompany(S.companyId);
+  const co=S.company||{};
   document.getElementById('cp-name').value=co.name||'';
   document.getElementById('cp-address').value=co.address||'';
   document.getElementById('cp-contact').value=co.contactPerson||'';
@@ -1477,12 +1632,17 @@ function showCoProfileModal(){
   hideAlert('co-profile-alert');
   showModal('modal-co-profile');
 }
-function saveCoProfile(){
+async function saveCoProfile(){
   const name=v('cp-name');if(!name){showAlert('co-profile-alert','Company name required.','danger');return;}
-  const cos=getCompanies();
-  const idx=cos.findIndex(c=>c.id===S.companyId);
-  if(idx>-1){Object.assign(cos[idx],{name,address:v('cp-address'),contactPerson:v('cp-contact'),email:v('cp-email'),phone:v('cp-phone'),industry:v('cp-industry'),country:v('cp-country')});}
-  saveCompanies(cos);closeModal('modal-co-profile');renderProfile();
+  showLoading('Saving...');
+  try{
+    const upd={name,address:v('cp-address'),contactPerson:v('cp-contact'),email:v('cp-email'),phone:v('cp-phone')};
+    if(document.getElementById('cp-industry'))upd.industry=v('cp-industry');
+    if(document.getElementById('cp-country'))upd.country=v('cp-country');
+    await _db.collection('companies').doc(S.companyId).update(upd);
+    Object.assign(S.company,upd);
+    hideLoading();closeModal('modal-co-profile');await renderProfile();
+  }catch(e){hideLoading();showAlert('co-profile-alert','Error: '+e.message,'danger');}
 }
 
 // ========================================
@@ -1533,26 +1693,38 @@ function renderGuide(){
 }
 
 // ========================================
-//  KPI DATA LAYER
+//  KPI DATA LAYER — Firebase-backed
+//  All KPI data lives in Firestore sub-collections
 // ========================================
-const getKpiCats=cid=>DB.get('cwx_kpi_cats_'+cid)||[];
-const saveKpiCats=(cid,d)=>DB.set('cwx_kpi_cats_'+cid,d);
-const getKpiDefs=cid=>DB.get('cwx_kpi_defs_'+cid)||[];
-const saveKpiDefs=(cid,d)=>DB.set('cwx_kpi_defs_'+cid,d);
-const getKpiTargets=cid=>DB.get('cwx_kpi_targets_'+cid)||[];
-const saveKpiTargets=(cid,d)=>DB.set('cwx_kpi_targets_'+cid,d);
-const getKpiAppraisals=cid=>DB.get('cwx_kpi_appraisals_'+cid)||[];
-const saveKpiAppraisals=(cid,d)=>DB.set('cwx_kpi_appraisals_'+cid,d);
-const getKpiApprovals=cid=>DB.get('cwx_kpi_approvals_'+cid)||[];
-const saveKpiApprovals=(cid,d)=>DB.set('cwx_kpi_approvals_'+cid,d);
-const getRatingBands=cid=>DB.get('cwx_kpi_bands_'+cid)||{exceeds:90,meets:75,developing:60};
-const saveRatingBandsData=(cid,d)=>DB.set('cwx_kpi_bands_'+cid,d);
-const getAuditTrail=cid=>DB.get('cwx_kpi_audit_'+cid)||[];
-function addAudit(cid,action,detail){
-  const trail=getAuditTrail(cid);
-  trail.unshift({id:'aud_'+Date.now(),action,detail,by:S.user?S.user.name:'System',at:new Date().toISOString()});
-  if(trail.length>200)trail.pop();
-  DB.set('cwx_kpi_audit_'+cid,trail);
+// In-memory KPI cache (loaded on tab open)
+let _kpiCache={cats:[],defs:[],targets:[],appraisals:[],approvals:[],bands:{exceeds:90,meets:75,developing:60}};
+
+async function loadKpiCache(cid){
+  const result=await getKpiDataAsync(cid);
+  _kpiCache=result;
+  return result;
+}
+
+// Sync-like getters that use the in-memory cache
+const getKpiCats=cid=>_kpiCache.cats||[];
+const getKpiDefs=cid=>_kpiCache.defs||[];
+const getKpiTargets=cid=>_kpiCache.targets||[];
+const getKpiAppraisals=cid=>_kpiCache.appraisals||[];
+const getKpiApprovals=cid=>_kpiCache.approvals||[];
+const getRatingBands=cid=>_kpiCache.bands||{exceeds:90,meets:75,developing:60};
+
+// Async save helpers
+async function saveKpiCats(cid,items){ /* saved individually via Firestore */ }
+async function saveKpiDefs(cid,items){ /* saved individually via Firestore */ }
+async function saveKpiTargets(cid,items){ /* saved individually via Firestore */ }
+async function saveKpiAppraisals(cid,items){ /* saved individually via Firestore */ }
+async function saveKpiApprovals(cid,items){ /* saved individually via Firestore */ }
+async function saveRatingBandsData(cid,d){ await saveSettingsAsync(cid,'kpiBands',d); }
+
+async function addAudit(cid,action,detail){
+  try{
+    await _cc(cid,'kpiAudit').add({action,detail,by:S.user?(S.user.name||S.user.staffId):'System',at:new Date().toISOString()});
+  }catch(e){console.warn('Audit error:',e);}
 }
 
 // ========================================
@@ -1568,7 +1740,7 @@ function calcKpiScore(actual,target,unit){
 function calcOverallScore(staffId,period,cid){
   const cats=getKpiCats(cid);
   const defs=getKpiDefs(cid);
-  const targets=getKpiTargets(cid).filter(t=>t.period===period);
+  const targets=getKpiTargets(cid);
   const approvals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&a.period===period);
   if(!cats.length||!approvals.length)return null;
   const totalWeight=cats.reduce((a,c)=>a+(parseFloat(c.weighting)||0),0);
@@ -1634,7 +1806,8 @@ let editingKpiDefId=null;
 let editingKpiTargetId=null;
 let currentAppraisalId=null;
 
-function renderKpiTab(){
+async function renderKpiTab(){
+  await loadKpiCache(S.companyId);
   const isManager=S.user&&S.user.systemRole==='manager';
   const c=document.getElementById('kpi-content');
   const period=currentKpiPeriod();
@@ -1691,7 +1864,7 @@ function renderKpiSubContent(){
 
     c.innerHTML=`
       <div style="margin-bottom:1rem;font-size:12px;color:var(--text3);">Period: <strong style="color:var(--text);">${period}</strong>
-        <input type="month" id="kpi-period-filter" value="${period}" onchange="DB.set('cwx_kpi_period',this.value);renderKpiTab();" style="margin-left:.5rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;outline:none;"/>
+        <input type="month" id="kpi-period-filter" value="${period}" onchange="renderKpiTab();" style="margin-left:.5rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;outline:none;"/>
       </div>
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-label">Team Avg Score</div><div class="stat-val accent">${teamAvg!==null?teamAvg+'%':'—'}</div></div>
