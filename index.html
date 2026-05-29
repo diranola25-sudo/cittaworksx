@@ -1037,12 +1037,14 @@ async function loadSession(){
   const u=S.user;
   document.getElementById('user-avatar-btn').textContent=initials(u.name||u.staffId||'?');
   const isManager=u.systemRole==='manager';
-  ['nav-reports','nav-staff','nav-kpi'].forEach(id=>{
+  // Reports and Staff tabs are manager-only
+  ['nav-reports','nav-staff'].forEach(id=>{
     document.getElementById(id).classList.toggle('hidden',!isManager);
   });
-  // Load staff list for manager
-  if(isManager) S._staff=await getStaffAsync(S.companyId);
-  else S._staff=[];
+  // KPI tab is visible to ALL users (staff have My KPIs, managers have full KPI module)
+  document.getElementById('nav-kpi').classList.remove('hidden');
+  // Load staff list (all users need this for KPI target lookups)
+  S._staff = await getStaffAsync(S.companyId);
   // Load depts/roles
   const deptsDoc=await getSettingsAsync(S.companyId,'departments');
   S._depts=deptsDoc&&deptsDoc.list?deptsDoc.list:['Management','Sales','Operations','Finance','HR','IT','Marketing'];
@@ -1625,11 +1627,21 @@ async function renderProfile(){
   const c=document.getElementById('profile-content');
   c.innerHTML='<p style="color:var(--text3);">Loading...</p>';
   let totalVal=0,totalMins=0,daysLogged=0;
+  let kpiScore=null,kpiBand=null;
   try{
     const logs=await getLogsAsync(S.companyId,{staffId:u.staffId||u.id});
     daysLogged=logs.filter(l=>l.signOutTime).length;
     totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
     totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+  }catch(e){}
+  // Load KPI data for staff users to show current period score on profile
+  const isManager=u.systemRole==='manager';
+  try{
+    if(!_kpiCache.cats.length)await loadKpiCache(S.companyId);
+    const uid=u.staffId||u.id;
+    const period=currentKpiPeriod();
+    kpiScore=calcOverallScore(uid,period,S.companyId);
+    kpiBand=getRatingBand(kpiScore,S.companyId);
   }catch(e){}
   c.innerHTML=`
     <div class="card" style="margin-bottom:.9rem;">
@@ -1637,8 +1649,8 @@ async function renderProfile(){
         <div style="width:52px;height:52px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--accent);">${initials(u.name||u.staffId||'?')}</div>
         <div>
           <div style="font-size:16px;font-weight:600;">${esc(u.name||u.staffId)}</div>
-          <div style="font-size:12px;color:var(--text3);">${esc(u.staffId||u.id||'')} · ${esc(u.role||'')} · ${esc(u.department||'')}</div>
-          <span class="badge ${u.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:3px;">${u.systemRole==='manager'?'Manager':'Staff'}</span>
+          <div style="font-size:12px;color:var(--text3);">${esc(u.email||'')} · ${esc(u.role||'')} · ${esc(u.department||'')}</div>
+          <span class="badge ${isManager?'badge-warn':'badge-info'}" style="margin-top:3px;">${isManager?'Manager':'Staff'}</span>
         </div>
       </div>
       ${u.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(u.email)}</div>`:''}
@@ -1650,9 +1662,19 @@ async function renderProfile(){
       <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
     </div>
+    <!-- KPI Quick Summary -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-top:.75rem;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="switchTab('kpi')">
+      <div>${scoreRingSVG(kpiScore,52)}</div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.2rem;">KPI Performance · ${currentKpiPeriod()}</div>
+        <div style="font-size:15px;font-weight:600;">${kpiScore!==null?kpiScore+'%':'No scores yet'}</div>
+        ${kpiBand?`<span class="kpi-pill ${kpiBand.cls}">${kpiBand.label}</span>`:'<span style="font-size:12px;color:var(--text3);">Tap to view your KPI targets</span>'}
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
     <div style="margin-top:.75rem;">
       <button class="btn" style="width:100%;justify-content:center;margin-bottom:.6rem;" onclick="showEditProfile()">Edit My Profile</button>
-      ${u.systemRole==='manager'?`<button class="btn" style="width:100%;justify-content:center;margin-bottom:.6rem;" onclick="showCoProfileModal()">Edit Company Profile</button>`:''}
+      ${isManager?`<button class="btn" style="width:100%;justify-content:center;margin-bottom:.6rem;" onclick="showCoProfileModal()">Edit Company Profile</button>`:''}
       <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="doLogout()">Log Out</button>
     </div>`;
 }
@@ -2751,60 +2773,8 @@ function currentKpiPeriod_OLD(){
 }
 
 // ========================================
-//  UPDATED GUIDE (with KPI section)
-// ========================================
-function renderGuide(){
-  document.getElementById('guide-content').innerHTML=`
-    <div class="guide-section">
-      <h3>🏢 Getting Started</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Your company must be registered in the <strong>Admin Portal</strong> (admin.html) by a system administrator before you can log in.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">On the home screen, <strong>select your company</strong>, then enter your <strong>Staff ID</strong> and <strong>Password</strong> to sign in.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>⏰ Daily Sign-In</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Open the app and tap <strong>Sign In</strong> on the Dashboard tab. Your precise location is captured automatically.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Allow location access when prompted — this is required for accurate attendance records.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>✅ Adding Tasks</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Go to the <strong>Tasks</strong> tab and tap <strong>+ Add Task</strong>.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Each task requires: <strong>Description</strong>, <strong>Duration</strong> (minutes), and <strong>Value Added</strong> (₦ amount).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tasks <strong>auto-save</strong> as you type. Close the app and return later — your work is preserved.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>📋 Review & Sign Out</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">Tap <strong>Review & Submit Tasks</strong> at the bottom of the Tasks tab when done for the day.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Verify all tasks, then tap <strong>Submit & Sign Out</strong>. Sign-out location is captured automatically.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Important:</strong> You cannot sign out without at least one completed, described task with a value.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>🎯 KPI Module — Staff Guide</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>My KPIs tab:</strong> View all KPI targets assigned to you for the current month. Your overall weighted score and rating band (Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement) are shown at the top.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Self-Appraisal tab:</strong> For each assigned KPI, tap <strong>Start Self-Appraisal</strong> to enter your actual achievement value, describe your activities, optionally attach evidence (link or note), and enter your self-assessment score (0–100%). Tap <strong>Save Draft</strong> to save progress, or <strong>Submit</strong> when ready for manager review.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Appraisal Period:</strong> Each appraisal covers one calendar month (e.g. 2025-06 = June 2025). You submit one appraisal per KPI per month. All monthly results accumulate across the year to form your annual performance record.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>History tab:</strong> View all past monthly appraisal results, manager scores, and feedback. Select any year to see that year's cumulative performance across all periods.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>🎯 KPI Module — Manager Guide</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Setup — Categories:</strong> Create performance areas (e.g. Sales, Operations) and assign each a % weighting. All weightings must add up to exactly 100%.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup — KPI Definitions:</strong> Under each category, define measurable KPIs with name, unit (₦, %, number, Yes/No), and frequency (daily/weekly/monthly).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Targets:</strong> Assign each KPI a target value for a specific month (YYYY-MM format). Assign to individual staff, entire departments, or job roles. The period format is 2025-06 for June 2025.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Review tab:</strong> Shows three sections — (a) <strong>Pending:</strong> submissions awaiting your review — tap to open, adjust score if needed, add feedback and approve. (b) <strong>Approved:</strong> already reviewed this month. (c) <strong>Awaiting Submission:</strong> staff who have been assigned targets but have not yet submitted — useful for follow-up.</div></div>
-      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Monthly + Annual scoring:</strong> Each approved month contributes to the annual record. Rankings and Dashboard show the current month's scores. The annual performance report (Print PDF) shows both monthly breakdown and the cumulative year average for each staff member.</div></div>
-      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Rankings tab:</strong> Staff ranked by their overall weighted performance score for the current month. Select a different period from the dropdown to view historical rankings.</div></div>
-      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Performance Bands (Bands button):</strong> Customise score thresholds — default: ≥90% Exceeds Expectations, ≥75% Meets Expectations, ≥60% Developing, below 60% Needs Improvement.</div></div>
-      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Print PDF:</strong> Generates a full performance report for the selected period, showing rankings, individual KPI scores, and manager feedback.</div></div>
-    </div>
-    <div class="guide-section">
-      <h3>📱 Installing as an App</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Android:</strong> Open in Chrome → tap ⋮ menu → <em>Add to Home screen</em>.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>iPhone:</strong> Open in Safari → tap Share icon → <em>Add to Home Screen</em>.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">The app works <strong>offline</strong> — all data saves locally and syncs when you reconnect.</div></div>
-    </div>
-    <div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:10px;padding:1rem;font-size:13px;color:var(--text2);line-height:1.7;">
-      <strong style="color:var(--accent);">Need help?</strong> Contact your manager or the system administrator at your company.
-    </div>`;
-}
+//  UTILITY FUNCTIONS
+
 
 // Close modals on overlay click
 // ========================================
