@@ -32,6 +32,7 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#0a0f1e;font-weight:600;}
 .btn-primary:hover{background:#00b894;border-color:#00b894;}
 .btn-danger{background:var(--danger);border-color:var(--danger);color:#fff;}
+.btn-warn{background:var(--warn);border-color:var(--warn);color:#0a0f1e;}
 .btn-sm{padding:.35rem .75rem;font-size:13px;}
 .form-group{margin-bottom:.9rem;}
 .form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:.35rem;}
@@ -43,20 +44,26 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
 .alert-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
 .alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;}
 .alert-info{background:rgba(0,153,255,.1);border:1px solid rgba(0,153,255,.3);color:#0099ff;}
+.alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#f59e0b;}
 .co-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.65rem;display:flex;align-items:center;gap:12px;}
 .co-avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:17px;flex-shrink:0;}
-.theme-toggle{width:48px;height:26px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:13px;position:relative;cursor:pointer;flex-shrink:0;}
+.theme-toggle{width:48px;height:26px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:13px;position:relative;cursor:pointer;flex-shrink:0;border:none;}
 .theme-toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:var(--accent);border-radius:50%;transition:left .25s;}
 [data-theme="light"] .theme-toggle::after{left:25px;}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .modal-overlay.hidden{display:none;}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:1.75rem;margin:1rem;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto;padding:1.75rem;margin:1rem;}
 .modal-title{font-family:var(--font-mono);font-size:16px;font-weight:700;margin-bottom:1.25rem;}
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;}
 .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.9rem;}
 .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.3rem;}
 .stat-val{font-family:var(--font-mono);font-size:17px;font-weight:700;}
 .stat-val.accent{color:var(--accent);}
+.divider{border:none;border-top:1px solid var(--border);margin:.9rem 0;}
+.badge{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:12px;font-size:11px;font-weight:600;}
+.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b;}
+.badge-info{background:rgba(0,153,255,.15);color:#0099ff;}
+.badge-success{background:rgba(34,197,94,.15);color:#22c55e;}
 </style>
 </head>
 <body>
@@ -80,13 +87,9 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
       <div class="form-group"><label>Admin Email</label><input type="email" id="adm-email" placeholder="admin@example.com" autocomplete="username"/></div>
       <div class="form-group"><label>Password</label><input type="password" id="adm-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"/></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="doAdminLogin()">Sign In</button>
-      <div style="text-align:center;margin-top:1rem;">
-        <button class="theme-toggle" onclick="toggleTheme()"></button>
-      </div>
+      <div style="text-align:center;margin-top:1rem;"><button class="theme-toggle" onclick="toggleTheme()"></button></div>
       <div style="margin-top:1.25rem;padding:.85rem;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text3);line-height:1.6;">
-        <strong style="color:var(--text2);">First time setup?</strong><br>
-        Default: <code style="color:var(--accent);">admin@cittaworksx.com</code> / <code style="color:var(--accent);">Admin@123</code><br>
-        <span style="color:var(--warn);">Change password after first login.</span>
+        <strong style="color:var(--text2);">Default:</strong> <code style="color:var(--accent);">admin@cittaworksx.com</code> / <code style="color:var(--accent);">Admin@123</code>
       </div>
     </div>
   </div>
@@ -95,12 +98,9 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
 <!-- MAIN ADMIN -->
 <div class="screen" id="admin-main-screen" style="flex-direction:column;align-items:stretch;background:var(--bg);">
   <div class="topbar">
-    <div class="logo">
-      <div class="logo-icon">C</div>
-      Citta<span>Works</span>X
-      <span class="badge-admin">ADMIN</span>
-    </div>
+    <div class="logo"><div class="logo-icon">C</div>Citta<span>Works</span>X<span class="badge-admin">ADMIN</span></div>
     <div style="display:flex;align-items:center;gap:.75rem;">
+      <span id="topbar-user" style="font-size:13px;color:var(--text3);"></span>
       <button class="theme-toggle" onclick="toggleTheme()"></button>
       <button class="btn btn-sm btn-danger" onclick="doAdminLogout()">Log Out</button>
     </div>
@@ -111,16 +111,16 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
         <div class="page-title" style="margin:0;">Company <span>Management</span></div>
         <button class="btn btn-primary" onclick="openAddCompanyModal()">+ Add Company</button>
       </div>
-      <div class="stat-grid" id="admin-stats">
+      <div class="stat-grid">
         <div class="stat-card"><div class="stat-label">Companies</div><div class="stat-val accent" id="stat-cos">—</div></div>
         <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-val" id="stat-staff">—</div></div>
         <div class="stat-card"><div class="stat-label">Logs Today</div><div class="stat-val" id="stat-logs">—</div></div>
       </div>
       <div id="co-list-container"></div>
-      <div style="margin-top:2rem;" id="admin-users-section">
+      <div style="margin-top:2rem;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
           <div class="card-title" style="margin:0;">Admin Users</div>
-          <button class="btn btn-sm" onclick="openAddAdminModal()">+ Add Admin</button>
+          <button class="btn btn-sm btn-primary" onclick="openAdminUserModal()">+ Add Admin</button>
         </div>
         <div id="admin-users-list"></div>
       </div>
@@ -128,7 +128,9 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
   </div>
 </div>
 
-<!-- Add Company Modal -->
+<!-- ===== MODALS ===== -->
+
+<!-- Add/Edit Company -->
 <div class="modal-overlay hidden" id="modal-add-company">
   <div class="modal">
     <div class="modal-title" id="co-modal-title">Register New Company</div>
@@ -157,7 +159,7 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
   </div>
 </div>
 
-<!-- Company Detail Modal -->
+<!-- Company Detail -->
 <div class="modal-overlay hidden" id="modal-co-detail">
   <div class="modal">
     <div id="co-detail-content"></div>
@@ -165,32 +167,52 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
   </div>
 </div>
 
-<!-- Add Admin User Modal -->
-<div class="modal-overlay hidden" id="modal-add-admin">
+<!-- Add / Edit Admin User — includes portal credentials -->
+<div class="modal-overlay hidden" id="modal-admin-user">
   <div class="modal">
-    <div class="modal-title">Add Admin User</div>
+    <div class="modal-title" id="admin-user-modal-title">Add Admin User</div>
     <div id="admin-user-alert" class="alert hidden"></div>
-    <div class="form-row">
-      <div class="form-group"><label>Name *</label><input type="text" id="au-name"/></div>
-      <div class="form-group"><label>Email *</label><input type="email" id="au-email"/></div>
+
+    <div style="background:var(--bg3);border-radius:8px;padding:.75rem;margin-bottom:.9rem;font-size:12px;color:var(--text2);">
+      <strong style="color:var(--text);">Admin Portal Login</strong> — used to sign into this Admin Portal
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Password *</label><input type="password" id="au-pw"/></div>
+      <div class="form-group"><label>Full Name *</label><input type="text" id="au-name"/></div>
+      <div class="form-group"><label>Admin Email *</label><input type="email" id="au-email"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Admin Password *<span id="au-pw-hint" style="color:var(--text3);font-weight:400;"> (leave blank to keep)</span></label><input type="password" id="au-pw" placeholder="Min 6 characters"/></div>
       <div class="form-group"><label>Role</label>
         <select id="au-role"><option value="admin">Admin</option><option value="superadmin">Super Admin</option></select>
       </div>
     </div>
-    <div style="display:flex;gap:.75rem;">
-      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-add-admin')">Cancel</button>
+
+    <hr class="divider"/>
+    <div style="background:var(--bg3);border-radius:8px;padding:.75rem;margin-bottom:.9rem;font-size:12px;color:var(--text2);">
+      <strong style="color:var(--text);">Staff Portal Access</strong> — lets this admin log into the Staff Portal as a manager in any registered company
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Staff Portal Email</label><input type="email" id="au-staff-email" placeholder="Same or different email"/></div>
+      <div class="form-group"><label>Staff Portal Password</label><input type="password" id="au-staff-pw" placeholder="Min 6 characters"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Full Name (Staff Portal)</label><input type="text" id="au-staff-name" placeholder="Display name in staff portal"/></div>
+      <div class="form-group"><label>Department</label><input type="text" id="au-staff-dept" placeholder="e.g. Management"/></div>
+    </div>
+    <div id="au-staff-companies-group" style="display:none;">
+      <div class="form-group"><label>Assign to Companies</label>
+        <div id="au-staff-companies" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--br);padding:.6rem;max-height:130px;overflow-y:auto;font-size:13px;"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:.3rem;">Check each company this admin can access as Manager in the Staff Portal</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+      <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-admin-user')">Cancel</button>
       <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveAdminUser()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
-// ============================================================
-//  FIREBASE CONFIG — Same as index.html — Replace with yours
-// ============================================================
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA",
   authDomain:        "cittaworksx.firebaseapp.com",
@@ -201,161 +223,104 @@ const FIREBASE_CONFIG = {
 };
 
 let _db = null;
-
-function _initFirebase() {
-  if (typeof firebase === 'undefined') {
-    throw new Error('Firebase SDK did not load. Check your internet connection.');
-  }
-  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || FIREBASE_CONFIG.apiKey === '') {
-    throw new Error('Firebase config not set. Open admin.html in a text editor and replace AIzaSyDFPk32nsqNcss2kV_p1uj-AeWDQa4GHAA, cittaworksx etc. with your real Firebase config values.');
-  }
-  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-  _db = firebase.firestore();
+function _initFirebase(){
+  if(typeof firebase==='undefined')throw new Error('Firebase SDK did not load.');
+  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+  _db=firebase.firestore();
   _db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 }
+try{_initFirebase();}catch(e){console.error('Firebase init:',e);}
 
-try {
-  _initFirebase();
-} catch(e) {
-  console.error('Firebase init:', e);
-  // Show error on page after DOM loads
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('loading').classList.add('hidden');
-    const alertEl = document.getElementById('admin-login-alert');
-    if (alertEl) {
-      alertEl.className = 'alert alert-danger';
-      alertEl.style.display = 'block';
-      alertEl.innerHTML = '<strong>Setup Required</strong><br>' + e.message;
-    }
-  });
-}
+const _list=async r=>{const s=await r.get();return s.docs.map(d=>({id:d.id,...d.data()}));};
+const _get =async r=>{const s=await r.get();return s.exists?{id:s.id,...s.data()}:null;};
 
-const _list = async r => { const s=await r.get(); return s.docs.map(d=>({id:d.id,...d.data()})); };
-const _get  = async r => { const s=await r.get(); return s.exists?{id:s.id,...s.data()}:null; };
+let adminUser=null;
+let _editingCompanyId=null;
+let _editingAdminId=null;
+let _allCompanies=[];
 
-// ============================================================
-//  ADMIN AUTH — Stored in Firestore adminUsers collection
-//  Default admin seeded on first run
-// ============================================================
-let adminUser = null;
-let _editingCompanyId = null;
-
-function showLoading(msg='Loading…'){
-  document.getElementById('loading').classList.remove('hidden');
-  document.getElementById('loading-msg').textContent=msg;
-}
-function hideLoading(){ document.getElementById('loading').classList.add('hidden'); }
-function showModal(id){ document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
-function showAlert(id,msg,type){ const el=document.getElementById(id);if(!el)return;el.className='alert alert-'+type;el.textContent=msg; }
-function hideAlert(id){ const el=document.getElementById(id);if(el)el.classList.add('hidden'); }
-function v(id){ return (document.getElementById(id)||{}).value||''; }
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function toggleTheme(){ const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',t); localStorage.setItem('cwx_theme',t); }
-(()=>{ const t=localStorage.getItem('cwx_theme'); if(t)document.documentElement.setAttribute('data-theme',t); })();
-
-// Seed default admin on first load
-async function seedDefaultAdmin(){
-  if(!_db)return;
-  try{
-    const existing = await _db.collection('adminUsers').where('email','==','admin@cittaworksx.com').limit(1).get();
-    if(existing.empty){
-      await _db.collection('adminUsers').add({name:'System Admin',email:'admin@cittaworksx.com',password:'Admin@123',role:'superadmin',createdAt:new Date().toISOString()});
-      console.log('Default admin seeded');
-    }
-  }catch(e){ console.error('Seed error:',e); }
-}
-
-window.addEventListener('load', async ()=>{
-  // Check if Firebase config was filled in
-  if(!_db || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY' || FIREBASE_CONFIG.apiKey === ''){
-    hideLoading();
-    const alertEl = document.getElementById('admin-login-alert');
-    alertEl.className = 'alert alert-danger';
-    alertEl.style.display = 'block';
-    alertEl.innerHTML = `<strong>Firebase Setup Required</strong><br>
-      Open <strong>admin.html</strong> in a text editor and replace the 6 placeholder values in FIREBASE_CONFIG with your real Firebase project values.<br><br>
-      <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent);">
-        Open Firebase Console →
-      </a>`;
-    return;
-  }
-  showLoading('Connecting…');
-  try{
-    await seedDefaultAdmin();
-    hideLoading();
-  }catch(e){
-    hideLoading();
-    const alertEl = document.getElementById('admin-login-alert');
-    alertEl.className = 'alert alert-danger';
-    alertEl.style.display = 'block';
-    alertEl.textContent = 'Firebase error: ' + e.message;
-  }
-});
-
-async function doAdminLogin(){
-  const email=v('adm-email').trim();
-  const pw=v('adm-pw');
-  if(!email||!pw){showAlert('admin-login-alert','Enter email and password.','danger');return;}
-  showLoading('Signing in…');
-  try{
-    const snap=await _db.collection('adminUsers').where('email','==',email).where('password','==',pw).limit(1).get();
-    if(snap.empty){hideLoading();showAlert('admin-login-alert','Invalid email or password.','danger');return;}
-    adminUser={id:snap.docs[0].id,...snap.docs[0].data()};
-    hideLoading();
-    showScreen('admin-main-screen');
-    loadDashboard();
-  }catch(e){hideLoading();showAlert('admin-login-alert','Error: '+e.message,'danger');}
-}
-
-function doAdminLogout(){
-  adminUser=null;
-  showScreen('admin-login-screen');
-  document.getElementById('adm-email').value='';
-  document.getElementById('adm-pw').value='';
-  hideAlert('admin-login-alert');
-}
+// ---- Utils ----
+function showLoading(msg='Loading…'){document.getElementById('loading').classList.remove('hidden');document.getElementById('loading-msg').textContent=msg;}
+function hideLoading(){document.getElementById('loading').classList.add('hidden');}
+function showModal(id){document.getElementById(id).classList.remove('hidden');}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='alert alert-'+type;el.textContent=msg;el.classList.remove('hidden');}
+function hideAlert(id){const el=document.getElementById(id);if(el)el.classList.add('hidden');}
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toggleTheme(){const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('cwx_theme',t);}
+(()=>{const t=localStorage.getItem('cwx_theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-async function loadDashboard(){
-  showLoading('Loading companies…');
+// ---- Seed default admin ----
+async function seedDefaultAdmin(){
+  if(!_db)return;
   try{
-    const companies = await _list(_db.collection('companies'));
-    hideLoading();
-    // Stats
-    document.getElementById('stat-cos').textContent=companies.length;
-    // Count staff across all companies (parallel)
-    let totalStaff=0, totalLogs=0;
+    const ex=await _db.collection('adminUsers').where('email','==','admin@cittaworksx.com').limit(1).get();
+    if(ex.empty){
+      await _db.collection('adminUsers').add({name:'System Admin',email:'admin@cittaworksx.com',password:'Admin@123',role:'superadmin',createdAt:new Date().toISOString()});
+    }
+  }catch(e){console.error('Seed:',e);}
+}
+
+window.addEventListener('load',async()=>{
+  if(!_db){hideLoading();showAlert('admin-login-alert','Firebase not initialised. Check config.','danger');return;}
+  showLoading('Connecting…');
+  try{await seedDefaultAdmin();hideLoading();}
+  catch(e){hideLoading();showAlert('admin-login-alert','Firebase error: '+e.message,'danger');}
+});
+
+// ---- Auth ----
+async function doAdminLogin(){
+  const email=v('adm-email').trim();const pw=v('adm-pw');
+  if(!email||!pw){showAlert('admin-login-alert','Enter email and password.','danger');return;}
+  showLoading('Signing in…');
+  try{
+    const snap=await _db.collection('adminUsers').where('email','==',email).where('password','==',pw).limit(1).get();
+    if(snap.empty){hideLoading();showAlert('admin-login-alert','Invalid email or password.','danger');return;}
+    adminUser={id:snap.docs[0].id,...snap.docs[0].data()};
+    document.getElementById('topbar-user').textContent=adminUser.name||adminUser.email;
+    hideLoading();showScreen('admin-main-screen');loadDashboard();
+  }catch(e){hideLoading();showAlert('admin-login-alert','Error: '+e.message,'danger');}
+}
+
+function doAdminLogout(){
+  adminUser=null;showScreen('admin-login-screen');
+  document.getElementById('adm-email').value='';document.getElementById('adm-pw').value='';
+  hideAlert('admin-login-alert');
+}
+
+// ---- Dashboard ----
+async function loadDashboard(){
+  showLoading('Loading…');
+  try{
+    _allCompanies=await _list(_db.collection('companies'));
+    document.getElementById('stat-cos').textContent=_allCompanies.length;
+    let totalStaff=0,totalLogs=0;
     const today=new Date().toISOString().split('T')[0];
-    await Promise.all(companies.map(async co=>{
-      const staffSnap=await _db.collection('companies').doc(co.id).collection('staff').get();
-      totalStaff+=staffSnap.size;
-      const logsSnap=await _db.collection('companies').doc(co.id).collection('logs').where('date','==',today).get();
-      totalLogs+=logsSnap.size;
+    await Promise.all(_allCompanies.map(async co=>{
+      const ss=await _db.collection('companies').doc(co.id).collection('staff').get();
+      totalStaff+=ss.size;
+      const ls=await _db.collection('companies').doc(co.id).collection('logs').where('date','==',today).get();
+      totalLogs+=ls.size;
     }));
     document.getElementById('stat-staff').textContent=totalStaff;
     document.getElementById('stat-logs').textContent=totalLogs;
-    renderCompanyList(companies);
+    renderCompanyList(_allCompanies);
     loadAdminUsers();
-  }catch(e){
     hideLoading();
-    document.getElementById('co-list-container').innerHTML='<div style="color:var(--danger);padding:1rem;">Error: '+esc(e.message)+'<br><small>Check Firebase config and Firestore rules.</small></div>';
-  }
+  }catch(e){hideLoading();document.getElementById('co-list-container').innerHTML='<p style="color:var(--danger);">Error: '+esc(e.message)+'</p>';}
 }
 
 function renderCompanyList(companies){
   const c=document.getElementById('co-list-container');
-  if(!companies.length){
-    c.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3);">No companies registered yet. Click <strong>+ Add Company</strong> to get started.</div>';
-    return;
-  }
+  if(!companies.length){c.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3);">No companies yet. Click <strong>+ Add Company</strong>.</div>';return;}
   c.innerHTML=companies.map(co=>{
-    const bg=co.color||'rgba(0,212,170,.15)';
-    const tc=co.textColor||'#00d4aa';
+    const bg=co.color||'rgba(0,212,170,.15)';const tc=co.textColor||'#00d4aa';
     const l=(co.name||'?').charAt(0).toUpperCase();
     return `<div class="co-card">
       <div class="co-avatar" style="background:${bg};color:${tc};">${l}</div>
@@ -364,7 +329,7 @@ function renderCompanyList(companies){
         <div style="font-size:12px;color:var(--text3);">${esc(co.industry||'')}${co.country?' · '+esc(co.country):''}</div>
         ${co.email?`<div style="font-size:12px;color:var(--text3);">${esc(co.email)}</div>`:''}
       </div>
-      <div style="display:flex;gap:.5rem;">
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
         <button class="btn btn-sm" onclick="showCompanyDetail('${co.id}')">View</button>
         <button class="btn btn-sm" onclick="openEditCompany('${co.id}')">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteCompany('${co.id}','${esc(co.name)}')">Delete</button>
@@ -381,8 +346,7 @@ async function showCompanyDetail(coId){
     const today=new Date().toISOString().split('T')[0];
     const todayLogs=await _list(_db.collection('companies').doc(coId).collection('logs').where('date','==',today));
     hideLoading();
-    const bg=co.color||'rgba(0,212,170,.15)';
-    const tc=co.textColor||'#00d4aa';
+    const bg=co.color||'rgba(0,212,170,.15)';const tc=co.textColor||'#00d4aa';
     document.getElementById('co-detail-content').innerHTML=`
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
         <div style="width:52px;height:52px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px;color:${tc};">${(co.name||'?').charAt(0).toUpperCase()}</div>
@@ -391,85 +355,64 @@ async function showCompanyDetail(coId){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem;margin-bottom:1.1rem;">
         <div class="stat-card"><div class="stat-label">Staff</div><div class="stat-val">${staff.length}</div></div>
         <div class="stat-card"><div class="stat-label">Managers</div><div class="stat-val">${staff.filter(s=>s.systemRole==='manager').length}</div></div>
-        <div class="stat-card"><div class="stat-label">Today's Logs</div><div class="stat-val accent">${todayLogs.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Today Logs</div><div class="stat-val accent">${todayLogs.length}</div></div>
       </div>
       ${co.address?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📍 ${esc(co.address)}</div>`:''}
       ${co.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(co.email)}</div>`:''}
       ${co.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(co.phone)}</div>`:''}
       ${co.contactPerson?`<div style="font-size:13px;color:var(--text2);margin-bottom:.75rem;">👤 ${esc(co.contactPerson)}</div>`:''}
-      <div class="card-title">Registered Staff</div>
+      <div class="card-title" style="margin-top:.5rem;">Registered Staff</div>
       ${staff.length?staff.map(s=>`
         <div style="display:flex;align-items:center;gap:10px;padding:.55rem .75rem;background:var(--bg3);border-radius:8px;margin-bottom:.35rem;">
           <div style="width:32px;height:32px;border-radius:8px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);">${(s.name||'?').substring(0,2).toUpperCase()}</div>
-          <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${esc(s.name||s.staffId)}</div><div style="font-size:11px;color:var(--text3);">${esc(s.staffId||'')} · ${esc(s.role||'')} · ${esc(s.department||'')}</div></div>
-          <span style="font-size:11px;padding:.15rem .45rem;border-radius:4px;background:${s.systemRole==='manager'?'rgba(245,158,11,.15)':'rgba(0,153,255,.15)'};color:${s.systemRole==='manager'?'#f59e0b':'#0099ff'};">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${esc(s.name||s.email||s.staffId)}</div>
+          <div style="font-size:11px;color:var(--text3);">${esc(s.email||'')} · ${esc(s.role||'')} · ${esc(s.department||'')}</div></div>
+          <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
         </div>`).join(''):'<p style="color:var(--text3);font-size:13px;">No staff registered.</p>'}`;
     showModal('modal-co-detail');
   }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
+// ---- Company CRUD ----
 function openAddCompanyModal(){
   _editingCompanyId=null;
   document.getElementById('co-modal-title').textContent='Register New Company';
   ['cf-name','cf-industry','cf-country','cf-contact','cf-email','cf-phone','cf-address'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cf-color').value='#00d4aa';
-  document.getElementById('cf-tcolor').value='#0a0f1e';
-  hideAlert('co-form-alert');
-  showModal('modal-add-company');
+  document.getElementById('cf-color').value='#00d4aa';document.getElementById('cf-tcolor').value='#0a0f1e';
+  hideAlert('co-form-alert');showModal('modal-add-company');
 }
-
 async function openEditCompany(coId){
   showLoading('Loading…');
   try{
-    const co=await _get(_db.collection('companies').doc(coId));
-    hideLoading();
+    const co=await _get(_db.collection('companies').doc(coId));hideLoading();
     _editingCompanyId=coId;
     document.getElementById('co-modal-title').textContent='Edit Company';
-    document.getElementById('cf-name').value=co.name||'';
-    document.getElementById('cf-industry').value=co.industry||'';
-    document.getElementById('cf-country').value=co.country||'';
-    document.getElementById('cf-contact').value=co.contactPerson||'';
-    document.getElementById('cf-email').value=co.email||'';
-    document.getElementById('cf-phone').value=co.phone||'';
+    document.getElementById('cf-name').value=co.name||'';document.getElementById('cf-industry').value=co.industry||'';
+    document.getElementById('cf-country').value=co.country||'';document.getElementById('cf-contact').value=co.contactPerson||'';
+    document.getElementById('cf-email').value=co.email||'';document.getElementById('cf-phone').value=co.phone||'';
     document.getElementById('cf-address').value=co.address||'';
-    document.getElementById('cf-color').value=co.color||'#00d4aa';
-    document.getElementById('cf-tcolor').value=co.textColor||'#0a0f1e';
-    hideAlert('co-form-alert');
-    showModal('modal-add-company');
+    document.getElementById('cf-color').value=co.color||'#00d4aa';document.getElementById('cf-tcolor').value=co.textColor||'#0a0f1e';
+    hideAlert('co-form-alert');showModal('modal-add-company');
   }catch(e){hideLoading();alert('Error: '+e.message);}
 }
-
 async function saveCompany(){
-  const name=v('cf-name');
-  if(!name){showAlert('co-form-alert','Company name is required.','danger');return;}
+  const name=v('cf-name');if(!name){showAlert('co-form-alert','Company name required.','danger');return;}
   showLoading('Saving…');
   try{
-    const data={
-      name,industry:v('cf-industry'),country:v('cf-country'),
-      contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),
-      address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),
-      updatedAt:new Date().toISOString()
-    };
-    if(_editingCompanyId){
-      await _db.collection('companies').doc(_editingCompanyId).update(data);
-    } else {
-      data.createdAt=new Date().toISOString();
-      await _db.collection('companies').add(data);
-    }
+    const data={name,industry:v('cf-industry'),country:v('cf-country'),contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),updatedAt:new Date().toISOString()};
+    if(_editingCompanyId){await _db.collection('companies').doc(_editingCompanyId).update(data);}
+    else{data.createdAt=new Date().toISOString();await _db.collection('companies').add(data);}
     hideLoading();closeModal('modal-add-company');loadDashboard();
   }catch(e){hideLoading();showAlert('co-form-alert','Error: '+e.message,'danger');}
 }
-
-async function deleteCompany(coId, name){
-  if(!confirm(`Delete "${name}"? This will permanently remove the company and ALL staff and logs. This cannot be undone.`))return;
+async function deleteCompany(coId,name){
+  if(!confirm(`Delete "${name}"? This permanently removes ALL staff, logs and data. Cannot be undone.`))return;
   showLoading('Deleting…');
   try{
-    // Delete sub-collections
     const cols=['staff','logs','settings','kpiCategories','kpiDefinitions','kpiTargets','kpiAppraisals','kpiApprovals','kpiAudit'];
     for(const col of cols){
       const snap=await _db.collection('companies').doc(coId).collection(col).get();
-      const batch=_db.batch();
-      snap.docs.forEach(d=>batch.delete(d.ref));
+      const batch=_db.batch();snap.docs.forEach(d=>batch.delete(d.ref));
       if(snap.size>0)await batch.commit();
     }
     await _db.collection('companies').doc(coId).delete();
@@ -477,43 +420,168 @@ async function deleteCompany(coId, name){
   }catch(e){hideLoading();alert('Delete error: '+e.message);}
 }
 
+// ---- Admin Users ----
 async function loadAdminUsers(){
   try{
     const users=await _list(_db.collection('adminUsers'));
-    document.getElementById('admin-users-list').innerHTML=users.map(u=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:.75rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:.5rem;">
-        <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${esc(u.name||u.email)}</div><div style="font-size:12px;color:var(--text3);">${esc(u.email)} · ${esc(u.role||'admin')}</div></div>
-        ${adminUser&&adminUser.id!==u.id?`<button class="btn btn-sm btn-danger" onclick="deleteAdminUser('${u.id}','${esc(u.email)}')">Remove</button>`:'<span style="font-size:12px;color:var(--accent);">You</span>'}
-      </div>`).join('')||'<p style="color:var(--text3);">No admin users.</p>';
+    const c=document.getElementById('admin-users-list');
+    if(!users.length){c.innerHTML='<p style="color:var(--text3);">No admin users.</p>';return;}
+    c.innerHTML=users.map(u=>{
+      const isYou=adminUser&&adminUser.id===u.id;
+      const hasStaff=u.staffEmail||u.staffPortalEmail;
+      return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:.55rem;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:38px;height:38px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--accent);flex-shrink:0;">${(u.name||u.email||'?').charAt(0).toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:14px;">${esc(u.name||u.email)}</div>
+            <div style="font-size:12px;color:var(--text3);">${esc(u.email)} · <span class="badge ${u.role==='superadmin'?'badge-warn':'badge-info'}">${esc(u.role||'admin')}</span></div>
+            ${hasStaff?`<div style="font-size:11px;color:var(--success);margin-top:.2rem;">✓ Staff portal: ${esc(u.staffPortalEmail||u.staffEmail||'')}</div>`:'<div style="font-size:11px;color:var(--text3);margin-top:.2rem;">No staff portal access</div>'}
+          </div>
+          <div style="display:flex;gap:.4rem;flex-shrink:0;">
+            <button class="btn btn-sm" onclick="openAdminUserModal('${u.id}')">Edit</button>
+            ${!isYou?`<button class="btn btn-sm btn-danger" onclick="deleteAdminUser('${u.id}','${esc(u.email)}')">Remove</button>`:'<span style="font-size:12px;color:var(--accent);padding:.35rem .5rem;">You</span>'}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }catch(e){console.error('Load admins:',e);}
 }
 
-function openAddAdminModal(){
-  ['au-name','au-email','au-pw'].forEach(id=>document.getElementById(id).value='');
-  hideAlert('admin-user-alert');showModal('modal-add-admin');
+async function openAdminUserModal(editId){
+  _editingAdminId=editId||null;
+  document.getElementById('admin-user-modal-title').textContent=editId?'Edit Admin User':'Add Admin User';
+  document.getElementById('au-pw-hint').style.display=editId?'inline':'none';
+  hideAlert('admin-user-alert');
+
+  // Populate company checkboxes
+  const coBox=document.getElementById('au-staff-companies');
+  const coGroup=document.getElementById('au-staff-companies-group');
+  if(_allCompanies.length){
+    coGroup.style.display='block';
+    coBox.innerHTML=_allCompanies.map(co=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:.35rem 0;cursor:pointer;">
+        <input type="checkbox" class="au-co-check" value="${co.id}" style="width:15px;height:15px;accent-color:var(--accent);"/>
+        <span>${esc(co.name)}</span>
+      </label>`).join('');
+  }else{coGroup.style.display='none';}
+
+  if(editId){
+    showLoading('Loading…');
+    try{
+      const u=await _get(_db.collection('adminUsers').doc(editId));
+      hideLoading();
+      document.getElementById('au-name').value=u.name||'';
+      document.getElementById('au-email').value=u.email||'';
+      document.getElementById('au-pw').value='';
+      document.getElementById('au-role').value=u.role||'admin';
+      document.getElementById('au-staff-email').value=u.staffPortalEmail||u.staffEmail||'';
+      document.getElementById('au-staff-pw').value='';
+      document.getElementById('au-staff-name').value=u.staffPortalName||u.name||'';
+      document.getElementById('au-staff-dept').value=u.staffPortalDept||'Management';
+      // Tick assigned companies
+      const assigned=u.staffPortalCompanies||[];
+      document.querySelectorAll('.au-co-check').forEach(cb=>{cb.checked=assigned.includes(cb.value);});
+    }catch(e){hideLoading();alert('Error: '+e.message);return;}
+  }else{
+    ['au-name','au-email','au-pw','au-staff-email','au-staff-pw','au-staff-name'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('au-staff-dept').value='Management';
+    document.getElementById('au-role').value='admin';
+    document.querySelectorAll('.au-co-check').forEach(cb=>cb.checked=false);
+  }
+  showModal('modal-admin-user');
 }
 
 async function saveAdminUser(){
   const name=v('au-name'),email=v('au-email'),pw=v('au-pw'),role=v('au-role');
-  if(!name||!email||!pw){showAlert('admin-user-alert','All fields required.','danger');return;}
-  if(pw.length<6){showAlert('admin-user-alert','Password min 6 chars.','danger');return;}
+  const staffEmail=v('au-staff-email').trim();
+  const staffPw=v('au-staff-pw');
+  const staffName=v('au-staff-name')||name;
+  const staffDept=v('au-staff-dept')||'Management';
+  const assignedCos=[...document.querySelectorAll('.au-co-check:checked')].map(cb=>cb.value);
+
+  if(!name||!email){showAlert('admin-user-alert','Name and email are required.','danger');return;}
+  if(!_editingAdminId&&!pw){showAlert('admin-user-alert','Password is required for new admin.','danger');return;}
+  if(pw&&pw.length<6){showAlert('admin-user-alert','Admin password min 6 characters.','danger');return;}
+  if(staffEmail&&staffPw&&staffPw.length<6){showAlert('admin-user-alert','Staff portal password min 6 characters.','danger');return;}
+
   showLoading('Saving…');
   try{
-    const exists=await _db.collection('adminUsers').where('email','==',email).limit(1).get();
-    if(!exists.empty){hideLoading();showAlert('admin-user-alert','Email already in use.','danger');return;}
-    await _db.collection('adminUsers').add({name,email,password:pw,role,createdAt:new Date().toISOString()});
-    hideLoading();closeModal('modal-add-admin');loadAdminUsers();
+    // Check email uniqueness
+    if(!_editingAdminId){
+      const ex=await _db.collection('adminUsers').where('email','==',email).limit(1).get();
+      if(!ex.empty){hideLoading();showAlert('admin-user-alert','Email already in use.','danger');return;}
+    }
+
+    const data={name,email,role,updatedAt:new Date().toISOString()};
+    if(pw)data.password=pw;
+    if(staffEmail){
+      data.staffPortalEmail=staffEmail;
+      data.staffPortalName=staffName;
+      data.staffPortalDept=staffDept;
+      data.staffPortalCompanies=assignedCos;
+      if(staffPw)data.staffPortalPassword=staffPw;
+    }else{
+      // Clear staff portal access if email removed
+      data.staffPortalEmail='';data.staffPortalCompanies=[];
+    }
+
+    if(_editingAdminId){
+      await _db.collection('adminUsers').doc(_editingAdminId).update(data);
+    }else{
+      data.createdAt=new Date().toISOString();
+      await _db.collection('adminUsers').add(data);
+    }
+
+    // Sync staff portal access: create/update/remove staff records in each company
+    if(staffEmail){
+      for(const coId of _allCompanies.map(c=>c.id)){
+        const isAssigned=assignedCos.includes(coId);
+        const staffRef=_db.collection('companies').doc(coId).collection('staff');
+        // Find existing record for this admin in this company
+        const existing=await staffRef.where('email','==',staffEmail).limit(1).get();
+        if(isAssigned){
+          const staffDoc={
+            name:staffName,email:staffEmail,
+            staffId:staffEmail, // email IS the login identifier
+            department:staffDept,role:'Admin Manager',
+            systemRole:'manager',companyId:coId,
+            isAdminUser:true,updatedAt:new Date().toISOString()
+          };
+          if(staffPw)staffDoc.password=staffPw;
+          if(existing.empty){
+            staffDoc.createdAt=new Date().toISOString();
+            await staffRef.add(staffDoc);
+          }else{
+            await staffRef.doc(existing.docs[0].id).update(staffDoc);
+          }
+        }else if(!isAssigned&&!existing.empty){
+          // Remove access from unassigned company
+          await staffRef.doc(existing.docs[0].id).delete();
+        }
+      }
+    }
+
+    hideLoading();closeModal('modal-admin-user');loadAdminUsers();
   }catch(e){hideLoading();showAlert('admin-user-alert','Error: '+e.message,'danger');}
 }
 
 async function deleteAdminUser(id,email){
-  if(!confirm('Remove admin: '+email+'?'))return;
+  if(!confirm('Remove admin: '+email+'? Their staff portal access records will also be removed.'))return;
   showLoading('Removing…');
-  await _db.collection('adminUsers').doc(id).delete();
-  hideLoading();loadAdminUsers();
+  try{
+    // Get user data to clean up staff records
+    const u=await _get(_db.collection('adminUsers').doc(id));
+    if(u&&u.staffPortalEmail){
+      for(const co of _allCompanies){
+        const ex=await _db.collection('companies').doc(co.id).collection('staff').where('email','==',u.staffPortalEmail).limit(1).get();
+        if(!ex.empty)await ex.docs[0].ref.delete();
+      }
+    }
+    await _db.collection('adminUsers').doc(id).delete();
+    hideLoading();loadAdminUsers();
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
-// Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.add('hidden');});
 });

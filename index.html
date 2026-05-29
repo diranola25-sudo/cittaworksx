@@ -205,8 +205,6 @@ tr:last-child td{border-bottom:none;}
     <div style="text-align:center;margin-top:.75rem;">
       <button class="theme-toggle" onclick="toggleTheme()"></button>
     </div>
-    <!-- Debug panel - shows what happened on tap -->
-    <div id="cwx-debug" style="display:none;margin-top:1rem;background:rgba(255,165,0,.1);border:1px solid orange;border-radius:8px;padding:.75rem;font-size:11px;font-family:monospace;color:orange;white-space:pre-wrap;max-height:120px;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -221,7 +219,7 @@ tr:last-child td{border-bottom:none;}
         <p style="font-size:12px;color:var(--text3);margin-top:3px;">Staff Portal</p>
       </div>
       <div id="login-alert" class="alert hidden"></div>
-      <div class="form-group"><label>Staff ID</label><input type="text" id="login-id" placeholder="Enter Staff ID" autocomplete="username"/></div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="login-id" placeholder="Enter your email" autocomplete="email"/></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem;" onclick="doLogin()">Sign In</button>
       <div style="text-align:center;margin-top:1rem;">
@@ -396,7 +394,7 @@ tr:last-child td{border-bottom:none;}
       <div class="form-group"><label>Staff ID <span class="req">*</span></label><input type="text" id="s-id"/></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Email</label><input type="email" id="s-email"/></div>
+      <div class="form-group"><label>Email <span style="color:var(--danger);">*</span> <span style="font-size:11px;color:var(--text3);">(used to log in)</span></label><input type="email" id="s-email" placeholder="staff@company.com" required/></div>
       <div class="form-group"><label>Phone</label><input type="tel" id="s-phone"/></div>
     </div>
     <div class="form-row">
@@ -993,29 +991,18 @@ async function renderCompanyScreen(){
   }
 }
 
-function cwxDebug(msg){
-  console.log('CWX:',msg);
-  var el=document.getElementById('cwx-debug');
-  if(el){el.style.display='block';el.textContent+=new Date().toLocaleTimeString()+' '+msg+'\n';}
-}
-
 function _cwxPickCompany(idx){
-  cwxDebug('Card tapped: index='+idx);
   var companies=window._cwxCompanies||[];
-  cwxDebug('Companies loaded: '+companies.length);
   var co=companies[idx];
   if(!co){
-    cwxDebug('ERROR: no company at index '+idx);
     alert('Company data missing. Tap Refresh and try again.');
     return;
   }
-  cwxDebug('Selected: '+co.name+' id='+co.id);
   selectCompany(co.id,co);
 }
 
 function selectCompany(id,co){
-  cwxDebug('selectCompany called: id='+id+' name='+(co?co.name:'null'));
-  if(!id||!co){cwxDebug('ERROR: missing id or co');return;}
+  if(!id||!co){console.error('selectCompany: missing id or co');return;}
   S.companyId=id;S.company=co;
   var markEl=document.getElementById('login-co-mark');
   var nameEl=document.getElementById('login-co-name');
@@ -1026,20 +1013,19 @@ function selectCompany(id,co){
   if(idEl)idEl.value='';
   if(pwEl)pwEl.value='';
   hideAlert('login-alert');
-  cwxDebug('Calling showScreen(login-screen)');
   showScreen('login-screen');
-  cwxDebug('showScreen done. login-screen display='+document.getElementById('login-screen').style.display);
 }
 
 
 async function doLogin(){
-  const sid=document.getElementById('login-id').value.trim();
+  const email=document.getElementById('login-id').value.trim().toLowerCase();
   const pw=document.getElementById('login-pw').value;
-  if(!sid||!pw){showAlert('login-alert','Enter Staff ID and password.','danger');return;}
+  if(!email||!pw){showAlert('login-alert','Enter your email and password.','danger');return;}
   showLoading('Signing in…');
   try{
-    const snap=await _cc(S.companyId,'staff').where('staffId','==',sid).where('password','==',pw).limit(1).get();
-    if(snap.empty){hideLoading();showAlert('login-alert','Invalid Staff ID or password.','danger');return;}
+    // Query by email field (works for both regular staff and admin portal users)
+    const snap=await _cc(S.companyId,'staff').where('email','==',email).where('password','==',pw).limit(1).get();
+    if(snap.empty){hideLoading();showAlert('login-alert','Invalid email or password.','danger');return;}
     S.user={id:snap.docs[0].id,...snap.docs[0].data()};
     await loadSession();
     hideLoading();
@@ -1356,7 +1342,9 @@ function showRegisterStaff(editId){
 
 async function saveStaffMember(){
   const name=v('s-name'),dept=v('s-dept'),role=v('s-role'),pw=v('s-pw'),sysRole=v('s-sys-role');
+  const emailVal=v('s-email').trim().toLowerCase();
   if(!name){showAlert('staff-form-alert','Full name is required.','danger');return;}
+  if(!emailVal){showAlert('staff-form-alert','Email is required — staff use it to log in.','danger');return;}
   if(!dept){showAlert('staff-form-alert','Select a department.','danger');return;}
   if(!role){showAlert('staff-form-alert','Select a job role.','danger');return;}
   showLoading('Saving...');
@@ -1372,7 +1360,7 @@ async function saveStaffMember(){
       if(!pw||pw.length<6){hideLoading();showAlert('staff-form-alert','Password min 6 chars.','danger');return;}
       const ex=await _cc(S.companyId,'staff').where('staffId','==',sid).limit(1).get();
       if(!ex.empty){hideLoading();showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
-      await _cc(S.companyId,'staff').add({staffId:sid,name,email:v('s-email'),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
+      await _cc(S.companyId,'staff').add({staffId:emailVal||sid,name,email:emailVal||v('s-email').trim().toLowerCase(),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
     }
     hideLoading();closeModal('modal-register-staff');
     document.getElementById('s-id').disabled=false;
