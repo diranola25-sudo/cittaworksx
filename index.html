@@ -605,6 +605,7 @@ tr:last-child td{border-bottom:none;}
           <option value="currency">₦ Currency</option>
           <option value="percent">Percentage (%)</option>
           <option value="yesno">Yes / No</option>
+          <option value="text">Text (Qualitative)</option>
         </select>
       </div>
       <div class="form-group"><label>Frequency <span class="req">*</span></label>
@@ -689,10 +690,14 @@ tr:last-child td{border-bottom:none;}
       <textarea id="ka-desc" rows="3" placeholder="Describe what you did and how you achieved it…"></textarea></div>
     <div class="form-group"><label>Supporting Evidence (link or note)</label>
       <input type="text" id="ka-evidence" placeholder="e.g. Google Drive link, invoice ref, report title"/></div>
-    <div class="form-group">
+    <div class="form-group" id="ka-score-group">
       <label>Self-Assessment Score (%) <span class="req">*</span></label>
       <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100" onchange="this.dataset.userEdited='1'"/>
       <div style="font-size:11px;color:var(--text3);margin-top:.25rem;">Enter your own score (0–100%). Auto-calculated score shown above as reference.</div>
+      <!-- Shown only for Text (qualitative) KPIs -->
+      <div id="ka-text-score-notice" style="display:none;margin-top:.4rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:7px;padding:.55rem .75rem;font-size:12px;color:var(--warn);">
+        ℹ️ This is a <strong>qualitative KPI</strong>. Enter your honest self-assessment score (0–100%). Your manager will review your written response and assign the final score based on quality and completeness.
+      </div>
     </div>
     <!-- Remark / Score Justification -->
     <div class="form-group">
@@ -2323,6 +2328,7 @@ function unitLabel(unit){
     case 'currency': return '₦ Currency';
     case 'percent':  return '% Percentage';
     case 'yesno':    return 'Yes / No';
+    case 'text':     return 'Text (Qualitative)';
     default:         return 'Number';
   }
 }
@@ -2331,6 +2337,7 @@ function unitPlaceholder(unit){
     case 'currency': return 'e.g. 500000';
     case 'percent':  return 'e.g. 85  (number only, not %)';
     case 'yesno':    return 'yes  or  no';
+    case 'text':     return 'e.g. Submitted, Completed, Achieved…';
     default:         return 'e.g. 120';
   }
 }
@@ -2339,10 +2346,13 @@ function unitHint(unit){
     case 'currency': return 'Enter amount in ₦ — numbers only, no commas or symbols';
     case 'percent':  return 'Enter as a plain number, e.g. enter 85 to mean 85%';
     case 'yesno':    return 'Enter "yes" if fully achieved, "no" if not';
+    case 'text':     return 'Enter descriptive text — your manager will score this manually based on quality';
     default:         return 'Enter a plain number';
   }
 }
 function calcAutoScore(actual, target, unit){
+  // Text and qualitative units cannot be auto-scored — manager assigns score manually
+  if(unit==='text') return null;
   if(!target)return null;
   if(unit==='yesno') return actual&&actual.trim().toLowerCase()==='yes'?100:0;
   const a=parseFloat(String(actual).replace(/,/g,''));
@@ -2394,6 +2404,8 @@ function onAppraisalActualInput(){
 }
 
 function calcKpiScore(actual,target,unit){
+  // Text/qualitative KPIs: no auto-score — manager scores manually
+  if(unit==='text')return null;
   if(!target||target===0)return 0;
   if(unit==='yesno')return actual==='yes'?100:0;
   const raw=(parseFloat(actual)||0)/(parseFloat(target)||1)*100;
@@ -3168,16 +3180,31 @@ function openAppraisalModal(kpiId,targetId){
     </div>
     ${def&&def.description?`<div style="margin-top:.5rem;font-size:12px;color:var(--text3);">${esc(def.description)}</div>`:''}`;
 
-  // Unit-specific input label and hint
-  const unitHintEl=document.getElementById('ka-unit-hint');
-  if(unitHintEl)unitHintEl.textContent='· '+unitLabel(def?def.unit:'number');
-  const actualHintEl=document.getElementById('ka-actual-hint');
-  if(actualHintEl)actualHintEl.textContent=unitHint(def?def.unit:'number');
+  // Unit-specific input: swap to textarea for text/qualitative KPIs
   const actualInput=document.getElementById('ka-actual');
+  const unitHintEl=document.getElementById('ka-unit-hint');
+  const actualHintEl=document.getElementById('ka-actual-hint');
+  const autoBox=document.getElementById('ka-auto-score-box');
+  const scoreGroup=document.getElementById('ka-score-group');
+
+  if(unitHintEl)unitHintEl.textContent='· '+unitLabel(def?def.unit:'number');
+  if(actualHintEl)actualHintEl.textContent=unitHint(def?def.unit:'number');
   if(actualInput)actualInput.placeholder=unitPlaceholder(def?def.unit:'number');
 
-  // Populate existing values
-  const autoBox=document.getElementById('ka-auto-score-box');
+  // For text KPIs: hide auto-score, show manual scoring notice
+  if(def&&def.unit==='text'){
+    if(autoBox)autoBox.style.display='none';
+    if(scoreGroup){
+      const notice=document.getElementById('ka-text-score-notice');
+      if(notice)notice.style.display='block';
+    }
+  } else {
+    if(scoreGroup){
+      const notice=document.getElementById('ka-text-score-notice');
+      if(notice)notice.style.display='none';
+    }
+  }
+
   if(autoBox)autoBox.style.display='none';
   const scoreInput=document.getElementById('ka-selfscore');
   if(scoreInput)delete scoreInput.dataset.userEdited;
