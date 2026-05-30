@@ -403,16 +403,24 @@ async function openEditCompany(coId){
   }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 async function saveCompany(){
-  const name=v('cf-name');if(!name){showAlert('co-form-alert','Company name required.','danger');return;}
-  showLoading('Saving…');
+  const name=v('cf-name');
+  const code=v('cf-code').trim().toUpperCase();
+  // Validate before any async work
+  if(!name){showAlert('co-form-alert','Company name is required.','danger');return;}
+  if(!code){showAlert('co-form-alert','Company code is required. Staff use this to log in.','danger');return;}
+  if(code.length<2||code.length>10){showAlert('co-form-alert','Company code must be 2–10 characters.','danger');return;}
+  showLoading('Checking code availability…');
   try{
-    const code=v('cf-code').trim().toUpperCase();
-  if(!code){showAlert('co-form-alert','Company code is required.','danger');return;}
-  // Check uniqueness
-  const codeQ=await _db.collection('companies').where('code','==',code).get();
-  const conflicting=codeQ.docs.filter(d=>d.id!==(_editingCompanyId||''));
-  if(conflicting.length>0){showLoading(false);showAlert('co-form-alert','Company code already in use by another company.','danger');return;}
-  const data={name,industry:v('cf-industry'),country:v('cf-country'),contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),code,status:v('cf-status')||'active',updatedAt:new Date().toISOString()};
+    // Uniqueness check — exclude current company when editing
+    const codeQ=await _db.collection('companies').where('code','==',code).get();
+    const conflicting=codeQ.docs.filter(d=>d.id!==(_editingCompanyId||''));
+    if(conflicting.length>0){
+      hideLoading();
+      showAlert('co-form-alert','Company code "'+code+'" is already in use by another company. Please choose a different code.','danger');
+      return;
+    }
+    showLoading('Saving…');
+    const data={name,industry:v('cf-industry'),country:v('cf-country'),contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),code,status:v('cf-status')||'active',updatedAt:new Date().toISOString()};
     if(_editingCompanyId){await _db.collection('companies').doc(_editingCompanyId).update(data);}
     else{data.createdAt=new Date().toISOString();await _db.collection('companies').add(data);}
     hideLoading();closeModal('modal-add-company');loadDashboard();
