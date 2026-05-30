@@ -691,8 +691,16 @@ tr:last-child td{border-bottom:none;}
       <input type="text" id="ka-evidence" placeholder="e.g. Google Drive link, invoice ref, report title"/></div>
     <div class="form-group">
       <label>Self-Assessment Score (%) <span class="req">*</span></label>
-      <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100"/>
+      <input type="number" id="ka-selfscore" min="0" max="100" placeholder="0–100" onchange="this.dataset.userEdited='1'"/>
       <div style="font-size:11px;color:var(--text3);margin-top:.25rem;">Enter your own score (0–100%). Auto-calculated score shown above as reference.</div>
+    </div>
+    <!-- Remark / Score Justification -->
+    <div class="form-group">
+      <label>Score Justification / Remarks <span class="req">*</span></label>
+      <textarea id="ka-remark" rows="3"
+        placeholder="Explain your self-score. Include any factors, challenges, or circumstances that affected your performance on this KPI…"
+        style="resize:vertical;"></textarea>
+      <div style="font-size:11px;color:var(--text3);margin-top:.25rem;">This remark is visible to your reviewer and forms part of the appraisal record.</div>
     </div>
     <div style="display:flex;gap:.75rem;margin-top:.25rem;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="saveAppraisalDraft()">Save Draft</button>
@@ -1301,29 +1309,39 @@ async function doSignIn(){
 // ========================================
 function initiateSignOut(){
   if(S.tasks.length===0){showAlert('main-alert','Add at least one completed task before signing out.','warn');switchTab('tasks');return;}
-  const invalid=S.tasks.filter(t=>!t.description||!t.description.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0));
-  if(invalid.length){showAlert('main-alert','All tasks must have a description, duration, and value before signing out.','warn');switchTab('tasks');return;}
+  const invalid=S.tasks.filter(t=>!t.description||!t.description.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0)||t.completion===undefined||t.completion===''||t.completion===null);
+  if(invalid.length){showAlert('main-alert','All tasks must have a description, duration, value, and completion % before signing out.','warn');switchTab('tasks');return;}
   showReview();
 }
 
 function showReview(){
   if(!S.todayLog||!S.todayLog.signInTime){showAlert('main-alert','Please sign in first.','warn');return;}
   if(S.tasks.length===0){showAlert('main-alert','No tasks to review.','warn');return;}
-  const invalid=S.tasks.filter(t=>!t.description?.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0));
-  if(invalid.length){showAlert('main-alert','All tasks need description, duration, and value > 0.','warn');return;}
+  const invalid=S.tasks.filter(t=>!t.description?.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0)||t.completion===undefined||t.completion===null||t.completion==='');
+  if(invalid.length){showAlert('main-alert','All tasks require a description, duration, value, and completion %.','warn');return;}
   hideAlert('review-alert');
   const list=document.getElementById('review-task-list');
-  list.innerHTML=S.tasks.map((t,i)=>`
-    <div class="review-task-row">
-      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+  list.innerHTML=S.tasks.map((t,i)=>{
+    const comp=parseInt(t.completion||0);
+    const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
+    const compBg=comp===100?'rgba(34,197,94,.12)':comp>=50?'rgba(245,158,11,.12)':'var(--bg4)';
+    return`<div class="review-task-row">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;align-items:center;">
         <span class="task-num">Task ${i+1}</span>
-        <span class="badge badge-accent" style="font-family:var(--font-mono);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;padding:.15rem .45rem;border-radius:8px;color:${compColor};background:${compBg};">${comp}%</span>
+          <span class="badge badge-accent" style="font-family:var(--font-mono);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+        </div>
       </div>
-      <div style="font-size:13px;margin-bottom:.3rem;">${esc(t.description)}</div>
-      <div style="display:flex;gap:1rem;font-size:12px;color:var(--text3);">
+      <div style="font-size:13px;margin-bottom:.35rem;">${esc(t.description)}</div>
+      <div style="display:flex;gap:1rem;font-size:12px;color:var(--text3);margin-bottom:.4rem;">
         <span>⏱ ${t.duration||0} min (${minsToHours(parseInt(t.duration)||0)})</span>
       </div>
-    </div>`).join('');
+      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${comp}%;background:${compColor};border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }).join('');
   const totalVal=S.tasks.reduce((a,t)=>a+(parseFloat((t.value||'').replace(/,/g,''))||0),0);
   const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
   document.getElementById('review-totals').innerHTML=`
@@ -1389,26 +1407,43 @@ function renderTasks(){
   addBtn.style.display=isLocked?'none':'block';
   footer.style.display=isLocked?'none':'block';
   if(isLocked){
-    c.innerHTML=S.tasks.map((t,i)=>`
-      <div class="task-item">
+    c.innerHTML=S.tasks.map((t,i)=>{
+      const comp=parseInt(t.completion||0);
+      const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
+      const compBg=comp===100?'rgba(34,197,94,.12)':comp>=50?'rgba(245,158,11,.12)':'var(--bg4)';
+      return`<div class="task-item">
         <div class="task-header">
           <span class="task-num">Task ${i+1}</span>
           <div style="display:flex;gap:.5rem;align-items:center;">
+            <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;padding:.15rem .5rem;border-radius:10px;color:${compColor};background:${compBg};">${comp}%</span>
             <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
             <span class="badge badge-success" style="font-family:var(--font-mono);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
           </div>
         </div>
-        <p style="font-size:13px;">${esc(t.description||'')}</p>
-      </div>`).join('')||'<p style="color:var(--text3);font-size:13px;">No tasks recorded.</p>';
+        <p style="font-size:13px;margin-bottom:.3rem;">${esc(t.description||'')}</p>
+        <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:.4rem;">
+          <div style="height:100%;width:${comp}%;background:${compColor};border-radius:3px;transition:width .4s;"></div>
+        </div>
+      </div>`;
+    }).join('')||'<p style="color:var(--text3);font-size:13px;">No tasks recorded.</p>';
     return;
   }
   c.innerHTML=S.tasks.map((t,i)=>`
     <div class="task-item">
       <div class="task-header">
         <span class="task-num">Task ${i+1}</span>
-        <button class="btn btn-sm btn-danger btn-icon" onclick="removeTask(${i})">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <!-- Completion pill -->
+          <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;
+            color:${parseInt(t.completion||0)===100?'var(--success)':parseInt(t.completion||0)>=50?'var(--warn)':'var(--text3)'};
+            background:${parseInt(t.completion||0)===100?'rgba(34,197,94,.12)':parseInt(t.completion||0)>=50?'rgba(245,158,11,.12)':'var(--bg4)'};
+            padding:.15rem .5rem;border-radius:10px;">
+            ${t.completion||0}%
+          </span>
+          <button class="btn btn-sm btn-danger btn-icon" onclick="removeTask(${i})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
       </div>
       <div class="form-group" style="margin-bottom:.55rem;">
         <textarea rows="2" placeholder="Describe the task…" style="resize:vertical;" onchange="updateTask(${i},'description',this.value)">${esc(t.description||'')}</textarea>
@@ -1430,12 +1465,31 @@ function renderTasks(){
           <div class="field-error" id="val-err-${i}" style="display:none;">Enter a valid amount > 0</div>
         </div>
       </div>
+      <!-- Completion percentage row -->
+      <div style="margin-top:.6rem;">
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:.3rem;">
+          Completion <span class="req">*</span>
+          <span style="font-weight:400;color:var(--text3);"> — how much of this task is done?</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <input type="range" min="0" max="100" step="5" value="${t.completion||0}"
+            oninput="updateTask(${i},'completion',this.value);this.nextElementSibling.textContent=this.value+'%'"
+            style="flex:1;accent-color:var(--accent);height:6px;cursor:pointer;"/>
+          <span style="font-family:var(--font-mono);font-weight:700;font-size:13px;width:38px;text-align:right;
+            color:${parseInt(t.completion||0)===100?'var(--success)':parseInt(t.completion||0)>=50?'var(--warn)':'var(--text3)'};">
+            ${t.completion||0}%
+          </span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:.2rem;">
+          <span>Not started</span><span>In Progress</span><span>Complete</span>
+        </div>
+      </div>
     </div>`).join('');
   updateTaskTotals();
 }
 
 function addTask(){
-  S.tasks.push({description:'',duration:'',value:''});
+  S.tasks.push({description:'',duration:'',value:'',completion:0});
   renderTasks();saveTasks();
   setTimeout(()=>{const items=document.querySelectorAll('.task-item');if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'center'});},80);
 }
@@ -1987,17 +2041,24 @@ function showLogDetail(logId){
     ${l.signInLocation?`<div style="padding:.65rem .85rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.4rem;">📍 <b>In:</b> ${esc(l.signInLocation.address||'')} (±${l.signInLocation.accuracy}m)</div>`:''}
     ${l.signOutLocation?`<div style="padding:.65rem .85rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.75rem;">📍 <b>Out:</b> ${esc(l.signOutLocation.address||'')} (±${l.signOutLocation.accuracy}m)</div>`:''}
     <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;">Tasks</div>
-    ${(l.tasks||[]).map((t,i)=>`
-      <div style="background:var(--bg3);border-radius:8px;padding:.7rem .85rem;margin-bottom:.4rem;">
+    ${(l.tasks||[]).map((t,i)=>{
+      const comp=parseInt(t.completion||0);
+      const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
+      return`<div style="background:var(--bg3);border-radius:8px;padding:.7rem .85rem;margin-bottom:.4rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
           <span class="task-num">Task ${i+1}</span>
-          <div style="display:flex;gap:.5rem;">
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${compColor};">${comp}%</span>
             <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
             <span style="font-family:var(--font-mono);font-size:12px;color:var(--success);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
           </div>
         </div>
-        <p style="font-size:13px;">${esc(t.description||'')}</p>
-      </div>`).join('')}
+        <p style="font-size:13px;margin-bottom:.35rem;">${esc(t.description||'')}</p>
+        <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${comp}%;background:${compColor};border-radius:2px;"></div>
+        </div>
+      </div>`;
+    }).join('')}
     ${(l.tasks||[]).length?`<div class="total-row"><span style="font-size:13px;">Total Value</span><span style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</span></div>`:''}`;
   showModal('modal-report-detail');
 }
@@ -3124,6 +3185,7 @@ function openAppraisalModal(kpiId,targetId){
   document.getElementById('ka-actual').value=existing?existing.actualValue||'':'';
   document.getElementById('ka-desc').value=existing?existing.description||'':'';
   document.getElementById('ka-evidence').value=existing?existing.evidenceNote||'':'';
+  document.getElementById('ka-remark').value=existing?existing.remark||'':'';
   if(scoreInput)scoreInput.value=existing&&existing.selfScore!=null?existing.selfScore:'';
 
   // If editing, show auto-score for existing actual value
@@ -3137,14 +3199,16 @@ function submitAppraisal(){saveAppraisalData('submitted');}
 async function saveAppraisalData(status){
   const kpiId=document.getElementById('modal-kpi-appraisal').dataset.kpiId;
   const actual=v('ka-actual');const desc=v('ka-desc');const selfScore=parseFloat(v('ka-selfscore'));
+  const remark=v('ka-remark').trim();
   if(!actual){showAlert('kpi-appraisal-alert','Enter your actual achievement.','danger');return;}
   if(!desc){showAlert('kpi-appraisal-alert','Describe your activities.','danger');return;}
   if(status==='submitted'&&(isNaN(selfScore)||selfScore<0||selfScore>100)){showAlert('kpi-appraisal-alert','Enter a self-assessment score between 0 and 100.','danger');return;}
+  if(status==='submitted'&&!remark){showAlert('kpi-appraisal-alert','A score justification / remark is required before submitting.','danger');document.getElementById('ka-remark').focus();return;}
   showLoading('Saving…');
   try{
     const uid=S.user.staffId||S.user.id;
-    const period=currentKpiPeriod();
-    const data={actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),
+    const period=document.getElementById('kpi-appraise-period')?.value||currentKpiPeriod();
+    const data={actualValue:actual,description:desc,evidenceNote:v('ka-evidence'),remark,
       selfScore:isNaN(selfScore)?null:selfScore,status,updatedAt:new Date().toISOString(),
       submittedAt:status==='submitted'?new Date().toISOString():null};
     if(currentAppraisalId){
@@ -3224,6 +3288,7 @@ function openKpiReviewModal(appraisalId){
       </div>`:''}
       <div style="font-size:13px;margin-top:.6rem;"><strong>Activities:</strong> ${esc(a.description)}</div>
       ${a.evidenceNote?`<div style="font-size:12px;color:var(--text2);margin-top:.3rem;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
+      ${a.remark?`<div style="font-size:12px;margin-top:.4rem;padding:.5rem .75rem;background:rgba(0,153,255,.06);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;"><strong style="color:var(--accent);">Score Justification:</strong> ${esc(a.remark)}</div>`:'<div style="font-size:12px;color:var(--warn);margin-top:.3rem;">⚠ No score justification provided.</div>'}
       <div style="margin-top:.5rem;font-size:12px;display:flex;gap:1rem;">
         <span>Staff self-score: <strong>${a.selfScore!=null?a.selfScore+'%':'—'}</strong></span>
         ${autoScore!==null?`<span style="color:var(--text3);">Auto-calc: <strong>${autoScore}%</strong></span>`:''}
@@ -3311,6 +3376,7 @@ function showAppraisalDetail(appraisalId){
       <div><strong>Actual:</strong> ${esc(a.actualValue)}</div>
       <div style="margin-top:.3rem;"><strong>Activities:</strong> ${esc(a.description)}</div>
       ${a.evidenceNote?`<div style="margin-top:.3rem;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
+      ${a.remark?`<div style="margin-top:.5rem;padding:.5rem .75rem;background:rgba(0,153,255,.06);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;font-size:12px;"><strong style="color:var(--accent);">Score Justification:</strong> ${esc(a.remark)}</div>`:''}
     </div>
     ${allApprovals.length?`
     <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.5rem;">Approval History</div>
