@@ -1066,26 +1066,44 @@ async function loadSession(){
   const u=S.user;
   document.getElementById('user-avatar-btn').textContent=initials(u.name||u.staffId||'?');
   const isManager=u.systemRole==='manager';
-  // Reports and Staff tabs are manager-only
   ['nav-reports','nav-staff'].forEach(id=>{
     document.getElementById(id).classList.toggle('hidden',!isManager);
   });
-  // KPI tab is visible to ALL users (staff have My KPIs, managers have full KPI module)
   document.getElementById('nav-kpi').classList.remove('hidden');
-  // Load staff list (all users need this for KPI target lookups)
   S._staff = await getStaffAsync(S.companyId);
-  // Load depts/roles
   const deptsDoc=await getSettingsAsync(S.companyId,'departments');
   S._depts=deptsDoc&&deptsDoc.list?deptsDoc.list:['Management','Sales','Operations','Finance','HR','IT','Marketing'];
   const rolesDoc=await getSettingsAsync(S.companyId,'jobRoles');
   S._roles=rolesDoc&&rolesDoc.list?rolesDoc.list:['General Manager','Sales Executive','Accountant','HR Officer','IT Support','Marketing Officer'];
-  // Load today's log
+
   const today=todayStr();
+  // Load today's log
   const todayLogs=await getLogsAsync(S.companyId,{staffId:u.staffId,date:today});
   S.todayLog=todayLogs.length?todayLogs[0]:null;
   S.signedIn=!!(S.todayLog&&S.todayLog.signInTime&&!S.todayLog.signOutTime);
   S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
-  // Report date defaults
+
+  // ── Check for incomplete previous-day logs ──────────────────────────────
+  // If no sign-in today, look for any open log from previous days
+  if(!S.todayLog){
+    const openLogs=await _cc(S.companyId,'logs')
+      .where('staffId','==',u.staffId)
+      .where('submitted','==',false)
+      .orderBy('date','desc')
+      .limit(3)
+      .get();
+    const incompletePrev=openLogs.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(l=>l.date<today&&l.signInTime&&!l.signOutTime);
+    if(incompletePrev.length>0){
+      S.pendingIncompleteLog=incompletePrev[0]; // most recent
+    } else {
+      S.pendingIncompleteLog=null;
+    }
+  } else {
+    S.pendingIncompleteLog=null;
+  }
+
   const firstDay=new Date();firstDay.setDate(1);
   document.getElementById('rpt-from').value=firstDay.toISOString().split('T')[0];
   document.getElementById('rpt-to').value=today;
@@ -1105,13 +1123,43 @@ function updateDashboard(){
   const totalMins=S.tasks.reduce((a,t)=>a+(parseInt(t.duration)||0),0);
   document.getElementById('stat-hours').textContent=minsToHours(totalMins);
   const area=document.getElementById('signin-btn-area');
-  const co=getCompany(S.companyId);
+
+  // ── Incomplete previous-day log banner ──────────────────────────────────
+  if(S.pendingIncompleteLog){
+    const prev=S.pendingIncompleteLog;
+    const dateLabel=new Date(prev.date+'T00:00:00').toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    area.innerHTML=`
+      <div style="background:rgba(245,158,11,.08);border:1.5px solid var(--warn);border-radius:12px;padding:1.25rem;margin-bottom:.75rem;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--warn);">Incomplete Day — ${esc(dateLabel)}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:.15rem;">You signed in at ${fmtTime(prev.signInTime)} but never signed out. ${prev.tasks&&prev.tasks.length>0?prev.tasks.length+' task(s) saved.':'No tasks were added.'}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:.75rem;">Please resolve this before signing in today. Choose an option:</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="resolveIncompleteLog('complete')">
+            ✅ Add tasks &amp; close ${esc(dateLabel.split(',')[0])} sign-out
+          </button>
+          <button class="btn btn-warn" style="width:100%;justify-content:center;background:var(--warn);border-color:var(--warn);color:#0a0f1e;" onclick="resolveIncompleteLog('noshow')">
+            ⚠ Mark as No Sign-Out (no tasks, absent)
+          </button>
+          <button class="btn" style="width:100%;justify-content:center;" onclick="resolveIncompleteLog('dismiss')">
+            Skip for now — Sign In today anyway
+          </button>
+        </div>
+      </div>`;
+    return; // Don't show today's sign-in button until resolved
+  }
+
+  // ── Normal today sign-in/out UI ─────────────────────────────────────────
   if(!log||!log.signInTime){
     area.innerHTML=`<div style="background:rgba(0,212,170,.05);border:1.5px dashed var(--accent);border-radius:12px;padding:1.25rem;text-align:center;">
       <p style="font-size:13px;color:var(--text2);margin-bottom:.9rem;">Sign in to start tracking your working day.</p>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.8rem;" onclick="doSignIn()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        Sign In${co?' — '+esc(co.name):''}
+        Sign In — ${esc(S.company?S.company.name:'')}
       </button></div>`;
   } else if(!log.signOutTime){
     area.innerHTML=`<div style="background:rgba(239,68,68,.05);border:1.5px dashed var(--danger);border-radius:12px;padding:1.25rem;text-align:center;">
@@ -1125,6 +1173,44 @@ function updateDashboard(){
       <span class="badge badge-success" style="font-size:13px;padding:.4rem 1rem;">Day Complete ✓</span>
       <p style="font-size:13px;color:var(--text2);margin-top:.6rem;">Signed out at ${fmtTime(log.signOutTime)}.</p>
     </div>`;
+  }
+}
+
+// ── Resolve incomplete previous-day log ─────────────────────────────────────
+async function resolveIncompleteLog(action){
+  const prev=S.pendingIncompleteLog;
+  if(!prev)return;
+  if(action==='complete'){
+    // Load the incomplete log into S.todayLog so the tasks tab opens for editing
+    // Then the staff adds tasks and signs out that previous day's log
+    S.todayLog=prev;S.tasks=[...(prev.tasks||[])];S.signedIn=true;
+    S.pendingIncompleteLog=null;
+    showAlert('main-alert',`Editing ${prev.date} — add tasks then sign out to close this day.`,'warn');
+    switchTab('tasks');
+    return;
+  }
+  if(action==='noshow'){
+    // Mark as no-show: sign out immediately with no tasks, note added
+    showLoading('Closing previous day…');
+    try{
+      const closeTime=prev.date+'T23:59:00.000Z';
+      await _cc(S.companyId,'logs').doc(prev.id).update({
+        signOutTime:closeTime,signOutLocation:null,
+        tasks:[],submitted:true,
+        note:'Auto-closed: no sign-out recorded',
+        closedBy:'system',closedAt:new Date().toISOString()
+      });
+      S.pendingIncompleteLog=null;
+      hideLoading();
+      updateDashboard();
+    }catch(e){hideLoading();showAlert('main-alert','Error: '+e.message,'danger');}
+    return;
+  }
+  if(action==='dismiss'){
+    // Allow sign-in today — incomplete log stays unresolved
+    // Manager will see it in reports as open
+    S.pendingIncompleteLog=null;
+    updateDashboard();
   }
 }
 
@@ -1204,14 +1290,24 @@ async function confirmSignOut(){
   showLoading('Recording sign-out…');
   try{
     const now=new Date();
+    const isPreviousDay=S.todayLog&&S.todayLog.date<todayStr();
+    // For previous-day close-out, use end-of-that-day time if no location
+    const signOutTime=isPreviousDay?S.todayLog.date+'T23:59:00.000Z':now.toISOString();
     await _cc(S.companyId,'logs').doc(S.todayLog.id).update({
-      signOutTime:now.toISOString(),signOutLocation:S.signoutLoc||null,tasks:S.tasks,submitted:true
+      signOutTime,signOutLocation:isPreviousDay?null:(S.signoutLoc||null),
+      tasks:S.tasks,submitted:true,
+      ...(isPreviousDay?{note:'Signed out retroactively on '+todayStr()}:{})
     });
-    S.todayLog={...S.todayLog,signOutTime:now.toISOString(),signOutLocation:S.signoutLoc||null,tasks:S.tasks,submitted:true};
+    S.todayLog={...S.todayLog,signOutTime,tasks:S.tasks,submitted:true};
     S.signedIn=false;
+    // If this was a previous-day resolution, clear it and reload today fresh
+    if(isPreviousDay){
+      S.pendingIncompleteLog=null;
+      S.todayLog=null;S.tasks=[];
+    }
     hideLoading();closeModal('modal-signout');updateDashboard();renderTasks();
-    showAlert('main-alert','Signed out at '+fmtTime(now.toISOString()),'success');
-    setTimeout(()=>hideAlert('main-alert'),3000);
+    showAlert('main-alert',isPreviousDay?'Previous day closed. You can now sign in for today.':'Signed out at '+fmtTime(now.toISOString()),'success');
+    setTimeout(()=>hideAlert('main-alert'),4000);
   }catch(e){hideLoading();showAlert('signout-alert','Error: '+e.message,'danger');}
 }
 
