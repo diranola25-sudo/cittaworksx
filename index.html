@@ -445,26 +445,47 @@ tr:last-child td{border-bottom:none;}
 <div class="modal-overlay hidden" id="modal-dept-jobs">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Departments & Job Roles</div>
+    <div class="modal-title">Departments &amp; Job Roles</div>
     <div class="tabs">
       <button class="tab active" id="dj-tab-dept" onclick="switchDJTab('dept')">Departments</button>
       <button class="tab" id="dj-tab-roles" onclick="switchDJTab('roles')">Job Roles</button>
     </div>
+
+    <!-- ── Departments panel ── -->
     <div id="dj-dept-panel">
-      <div style="display:flex;gap:.6rem;margin-bottom:.75rem;">
-        <input type="text" id="new-dept-input" placeholder="New department name" style="flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"/>
-        <button class="btn btn-primary btn-sm" onclick="addDept()">Add</button>
+      <div style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;">Create New Department</div>
+        <div style="display:flex;gap:.6rem;">
+          <input type="text" id="new-dept-input" placeholder="e.g. Finance, Operations, HR…"
+            style="flex:1;background:var(--bg);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')addDept()"/>
+          <button class="btn btn-primary btn-sm" onclick="addDept()" style="white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="dept-add-error" style="font-size:12px;color:var(--danger);margin-top:.35rem;display:none;"></div>
       </div>
-      <div id="dept-list"></div>
+      <div id="dept-list-container">
+        <div id="dept-list"></div>
+      </div>
     </div>
+
+    <!-- ── Job Roles panel ── -->
     <div id="dj-roles-panel" style="display:none;">
-      <div style="display:flex;gap:.6rem;margin-bottom:.75rem;">
-        <input type="text" id="new-role-input" placeholder="New job role" style="flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"/>
-        <button class="btn btn-primary btn-sm" onclick="addJobRole()">Add</button>
+      <div style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;">Create New Job Role</div>
+        <div style="display:flex;gap:.6rem;">
+          <input type="text" id="new-role-input" placeholder="e.g. Sales Executive, Accountant…"
+            style="flex:1;background:var(--bg);border:1.5px solid var(--border);color:var(--text);padding:.55rem .85rem;border-radius:var(--br);font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')addJobRole()"/>
+          <button class="btn btn-primary btn-sm" onclick="addJobRole()" style="white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="role-add-error" style="font-size:12px;color:var(--danger);margin-top:.35rem;display:none;"></div>
       </div>
-      <div id="roles-list"></div>
+      <div id="roles-list-container">
+        <div id="roles-list"></div>
+      </div>
     </div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-dept-jobs')">Done</button>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.75rem;" onclick="closeModal('modal-dept-jobs')">Done</button>
   </div>
 </div>
 
@@ -1109,10 +1130,11 @@ async function loadSession(){
   });
   document.getElementById('nav-kpi').classList.remove('hidden');
   S._staff = await getStaffAsync(S.companyId);
+  // Load depts/roles — no hardcoded defaults, must be user-defined via Dept/Roles modal
   const deptsDoc=await getSettingsAsync(S.companyId,'departments');
-  S._depts=deptsDoc&&deptsDoc.list?deptsDoc.list:['Management','Sales','Operations','Finance','HR','IT','Marketing'];
+  S._depts=deptsDoc&&deptsDoc.list?deptsDoc.list:[];
   const rolesDoc=await getSettingsAsync(S.companyId,'jobRoles');
-  S._roles=rolesDoc&&rolesDoc.list?rolesDoc.list:['General Manager','Sales Executive','Accountant','HR Officer','IT Support','Marketing Officer'];
+  S._roles=rolesDoc&&rolesDoc.list?rolesDoc.list:[];
 
   const today=todayStr();
   // Load today's log
@@ -1580,9 +1602,20 @@ function showRegisterStaff(editId){
   document.getElementById('staff-modal-title').textContent=editId?'Edit Staff':'Register New Staff';
   hideAlert('staff-form-alert');
   const ds=document.getElementById('s-dept');
-  ds.innerHTML='<option value="">Select department</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
   const rs=document.getElementById('s-role');
-  rs.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+  // Show warning if no depts/roles exist yet
+  if(!S._depts||!S._depts.length){
+    ds.innerHTML='<option value="">— No departments yet —</option>';
+    const warn=document.getElementById('staff-form-alert');
+    if(warn){warn.className='alert alert-warn';warn.textContent='No departments exist yet. Please create departments first via Staff → Dept/Roles before registering staff.';warn.classList.remove('hidden');}
+  } else {
+    ds.innerHTML='<option value="">Select department</option>'+(S._depts||[]).map(d=>`<option>${esc(d)}</option>`).join('');
+  }
+  if(!S._roles||!S._roles.length){
+    rs.innerHTML='<option value="">— No job roles yet —</option>';
+  } else {
+    rs.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
+  }
   if(editId){
     const u=S._staff.find(x=>x.id===editId)||(S.user&&S.user.id===editId?S.user:null);
     if(u){
@@ -1694,38 +1727,135 @@ function switchDJTab(t){
   document.getElementById('dj-tab-roles').classList.toggle('active',t==='roles');
 }
 function renderDeptList(){
+  const list=document.getElementById('dept-list');
+  if(!list)return;
   const depts=S._depts||[];
-  document.getElementById('dept-list').innerHTML=depts.map((d,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
-      <span style="font-size:13px;">${esc(d)}</span>
-      <button class="btn btn-sm btn-danger" onclick="removeDept(${i})" style="padding:.2rem .5rem;">✕</button>
+  if(!depts.length){
+    list.innerHTML=`<div style="text-align:center;padding:1.25rem;background:var(--bg3);border-radius:8px;border:1.5px dashed var(--border2);">
+      <div style="font-size:28px;margin-bottom:.35rem;">🏢</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text2);">No departments yet</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:.3rem;">Use the form above to create departments.<br>Staff cannot be registered until at least one department exists.</div>
+    </div>`;
+    refreshDeptDropdowns();return;
+  }
+  list.innerHTML=depts.map((d,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:var(--bg3);border-radius:8px;margin-bottom:.35rem;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:500;">${esc(d)}</span>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeDept(${i})" style="padding:.25rem .6rem;font-size:12px;">Remove</button>
     </div>`).join('');
+  refreshDeptDropdowns();
 }
+
 async function addDept(){
   const inp=document.getElementById('new-dept-input');
-  const val=inp.value.trim();if(!val)return;
-  if(!S._depts.includes(val)){S._depts.push(val);await saveSettingsAsync(S.companyId,'departments',{list:S._depts});}
-  inp.value='';renderDeptList();
+  const errEl=document.getElementById('dept-add-error');
+  const val=inp.value.trim();
+  if(errEl)errEl.style.display='none';
+  if(!val){
+    if(errEl){errEl.textContent='Please enter a department name.';errEl.style.display='block';}
+    inp.focus();return;
+  }
+  const norm=val.charAt(0).toUpperCase()+val.slice(1);
+  if((S._depts||[]).some(d=>d.toLowerCase()===norm.toLowerCase())){
+    if(errEl){errEl.textContent=`"${norm}" already exists.`;errEl.style.display='block';}
+    inp.focus();return;
+  }
+  if(!S._depts)S._depts=[];
+  S._depts.push(norm);
+  try{
+    await saveSettingsAsync(S.companyId,'departments',{list:S._depts});
+    inp.value='';renderDeptList();
+  }catch(e){
+    S._depts.pop();
+    if(errEl){errEl.textContent='Error saving: '+e.message;errEl.style.display='block';}
+  }
 }
+
 async function removeDept(i){
-  S._depts.splice(i,1);await saveSettingsAsync(S.companyId,'departments',{list:S._depts});renderDeptList();
+  const dept=S._depts[i];
+  const inUse=(S._staff||[]).filter(s=>s.department===dept).length;
+  if(inUse&&!confirm(`"${dept}" is used by ${inUse} staff member(s). Remove anyway?`))return;
+  S._depts.splice(i,1);
+  await saveSettingsAsync(S.companyId,'departments',{list:S._depts});
+  renderDeptList();
 }
+
 function renderRolesList(){
+  const list=document.getElementById('roles-list');
+  if(!list)return;
   const roles=S._roles||[];
-  document.getElementById('roles-list').innerHTML=roles.map((r,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;background:var(--bg3);border-radius:6px;margin-bottom:.3rem;">
-      <span style="font-size:13px;">${esc(r)}</span>
-      <button class="btn btn-sm btn-danger" onclick="removeRole(${i})" style="padding:.2rem .5rem;">✕</button>
+  if(!roles.length){
+    list.innerHTML=`<div style="text-align:center;padding:1.25rem;background:var(--bg3);border-radius:8px;border:1.5px dashed var(--border2);">
+      <div style="font-size:28px;margin-bottom:.35rem;">💼</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text2);">No job roles yet</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:.3rem;">Use the form above to create job roles.<br>Staff cannot be registered until at least one role exists.</div>
+    </div>`;
+    refreshRoleDropdowns();return;
+  }
+  list.innerHTML=roles.map((r,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:var(--bg3);border-radius:8px;margin-bottom:.35rem;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:500;">${esc(r)}</span>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeRole(${i})" style="padding:.25rem .6rem;font-size:12px;">Remove</button>
     </div>`).join('');
+  refreshRoleDropdowns();
 }
+
 async function addJobRole(){
   const inp=document.getElementById('new-role-input');
-  const val=inp.value.trim();if(!val)return;
-  if(!S._roles.includes(val)){S._roles.push(val);await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});}
-  inp.value='';renderRolesList();
+  const errEl=document.getElementById('role-add-error');
+  const val=inp.value.trim();
+  if(errEl)errEl.style.display='none';
+  if(!val){
+    if(errEl){errEl.textContent='Please enter a job role name.';errEl.style.display='block';}
+    inp.focus();return;
+  }
+  const norm=val.charAt(0).toUpperCase()+val.slice(1);
+  if((S._roles||[]).some(r=>r.toLowerCase()===norm.toLowerCase())){
+    if(errEl){errEl.textContent=`"${norm}" already exists.`;errEl.style.display='block';}
+    inp.focus();return;
+  }
+  if(!S._roles)S._roles=[];
+  S._roles.push(norm);
+  try{
+    await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});
+    inp.value='';renderRolesList();
+  }catch(e){
+    S._roles.pop();
+    if(errEl){errEl.textContent='Error saving: '+e.message;errEl.style.display='block';}
+  }
 }
+
 async function removeRole(i){
-  S._roles.splice(i,1);await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});renderRolesList();
+  const role=S._roles[i];
+  const inUse=(S._staff||[]).filter(s=>s.role===role).length;
+  if(inUse&&!confirm(`"${role}" is used by ${inUse} staff member(s). Remove anyway?`))return;
+  S._roles.splice(i,1);
+  await saveSettingsAsync(S.companyId,'jobRoles',{list:S._roles});
+  renderRolesList();
+}
+
+// Refresh all dept/role dropdowns live so new entries appear immediately
+function refreshDeptDropdowns(){
+  const depts=S._depts||[];
+  const opts='<option value="">Select department</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  const el=document.getElementById('s-dept');
+  if(el){const cur=el.value;el.innerHTML=opts;el.value=cur||'';}
+  // Report filter
+  const rpt=document.getElementById('rpt-dept');
+  if(rpt){const cur=rpt.value;rpt.innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option>${esc(d)}</option>`).join('');rpt.value=cur||'';}
+}
+
+function refreshRoleDropdowns(){
+  const roles=S._roles||[];
+  const opts='<option value="">Select role</option>'+roles.map(r=>`<option>${esc(r)}</option>`).join('');
+  const el=document.getElementById('s-role');
+  if(el){const cur=el.value;el.innerHTML=opts;el.value=cur||'';}
 }
 
 // ========================================
