@@ -786,10 +786,34 @@ async function getStaffAsync(cid){ return await _list(_cc(cid,'staff')); }
 // Logs
 async function getLogsAsync(cid, filters={}){
   let q=_cc(cid,'logs');
-  if(filters.staffId)q=q.where('staffId','==',filters.staffId);
-  if(filters.date)q=q.where('date','==',filters.date);
-  if(filters.from)q=q.where('date','>=',filters.from);
-  if(filters.to)q=q.where('date','<=',filters.to);
+  // Use at most ONE where clause to avoid needing composite indexes.
+  // All other filtering is done client-side.
+  if(filters.staffId){
+    q=q.where('staffId','==',filters.staffId);
+    const results=await _list(q);
+    return results.filter(l=>{
+      if(filters.date&&l.date!==filters.date)return false;
+      if(filters.from&&l.date<filters.from)return false;
+      if(filters.to&&l.date>filters.to)return false;
+      return true;
+    });
+  } else if(filters.from||filters.to){
+    // Date range only — use >= to anchor the query on a single field
+    if(filters.from)q=q.where('date','>=',filters.from);
+    if(filters.to)q=q.where('date','<=',filters.to);
+    try{
+      return await _list(q);
+    }catch(e){
+      // Fallback: fetch all and filter client-side if index missing
+      console.warn('Date range query failed, fetching all:',e.message);
+      const all=await _list(_cc(cid,'logs'));
+      return all.filter(l=>{
+        if(filters.from&&l.date<filters.from)return false;
+        if(filters.to&&l.date>filters.to)return false;
+        return true;
+      });
+    }
+  }
   return await _list(q);
 }
 
@@ -1049,10 +1073,13 @@ async function doLogin(){
   if(!email||!pw){showAlert('login-alert','Enter your email and password.','danger');return;}
   showLoading('Signing in…');
   try{
-    // Query by email field (works for both regular staff and admin portal users)
-    const snap=await _cc(S.companyId,'staff').where('email','==',email).where('password','==',pw).limit(1).get();
+    // Query by email only (single field = no composite index needed)
+    // Then verify password client-side
+    const snap=await _cc(S.companyId,'staff').where('email','==',email).limit(1).get();
     if(snap.empty){hideLoading();showAlert('login-alert','Invalid email or password.','danger');return;}
-    S.user={id:snap.docs[0].id,...snap.docs[0].data()};
+    const staffDoc={id:snap.docs[0].id,...snap.docs[0].data()};
+    if(staffDoc.password!==pw){hideLoading();showAlert('login-alert','Invalid email or password.','danger');return;}
+    S.user=staffDoc;
     await loadSession();
     hideLoading();
     showScreen('main-screen');
@@ -1084,20 +1111,22 @@ async function loadSession(){
   S.tasks=S.todayLog?[...(S.todayLog.tasks||[])]:[];
 
   // ── Check for incomplete previous-day logs ──────────────────────────────
-  // If no sign-in today, look for any open log from previous days
+  // Simple query — no composite index needed
   if(!S.todayLog){
-    const openLogs=await _cc(S.companyId,'logs')
-      .where('staffId','==',u.staffId)
-      .where('submitted','==',false)
-      .orderBy('date','desc')
-      .limit(3)
-      .get();
-    const incompletePrev=openLogs.docs
-      .map(d=>({id:d.id,...d.data()}))
-      .filter(l=>l.date<today&&l.signInTime&&!l.signOutTime);
-    if(incompletePrev.length>0){
-      S.pendingIncompleteLog=incompletePrev[0]; // most recent
-    } else {
+    try{
+      // Query by staffId only — filter signOutTime client-side to avoid composite index
+      const openSnap=await _cc(S.companyId,'logs')
+        .where('staffId','==',u.staffId)
+        .limit(10)
+        .get();
+      const incompletePrev=openSnap.docs
+        .map(d=>({id:d.id,...d.data()}))
+        .filter(l=>l.date&&l.date<today&&l.signInTime&&!l.signOutTime)
+        .sort((a,b)=>b.date.localeCompare(a.date));
+      S.pendingIncompleteLog=incompletePrev.length>0?incompletePrev[0]:null;
+    }catch(e){
+      // If query fails (index missing), fall back gracefully — don't block login
+      console.warn('Incomplete log check skipped:',e.message);
       S.pendingIncompleteLog=null;
     }
   } else {
