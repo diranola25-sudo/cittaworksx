@@ -423,7 +423,18 @@ tr:last-child td{border-bottom:none;}
         <select id="s-sys-role"><option value="staff">Staff</option><option value="manager">Manager</option></select>
       </div>
     </div>
-    <div style="display:flex;gap:.75rem;margin-top:.25rem;">
+    <!-- Approval Chain -->
+    <div style="margin-top:.9rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <label style="font-size:13px;font-weight:500;color:var(--text2);">KPI Approval Chain
+          <span style="font-size:11px;color:var(--text3);font-weight:400;"> — who reviews this staff member's appraisals, in order</span>
+        </label>
+        <button class="btn btn-sm" onclick="addApprovalLevel()" type="button">+ Add Level</button>
+      </div>
+      <div id="approval-chain-list" style="min-height:36px;"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:.3rem;">Level 1 reviews first. The highest level is the final approver.</div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1rem;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="closeModal('modal-register-staff')">Cancel</button>
       <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveStaffMember()">Save</button>
     </div>
@@ -1463,6 +1474,107 @@ async function renderStaffList(){
   }catch(e){c.innerHTML='<p style="color:var(--danger);">Error: '+e.message+'</p>';}
 }
 
+
+// ============================================================
+//  APPROVAL CHAIN
+// ============================================================
+// In-memory chain being built in the modal
+let _editingChain = [];
+
+function renderApprovalChainList(){
+  const c=document.getElementById('approval-chain-list');
+  if(!c)return;
+  const managers=(S._staff||[]).filter(s=>s.systemRole==='manager');
+  if(!_editingChain.length){
+    c.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;background:var(--bg3);border-radius:6px;">No approval chain set — appraisals go to any available manager.</div>';
+    return;
+  }
+  c.innerHTML=_editingChain.map((lvl,i)=>`
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+      <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,212,170,.15);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+      <select class="chain-manager-sel" data-idx="${i}" style="flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);padding:.45rem .75rem;border-radius:var(--br);font-size:13px;outline:none;" onchange="updateChainLevel(${i},this.value)">
+        <option value="">Select manager…</option>
+        ${managers.map(m=>`<option value="${m.staffId||m.id}" ${(m.staffId||m.id)===lvl.managerId?'selected':''}>${esc(m.name||m.email)} — ${esc(m.role||m.department||'')}</option>`).join('')}
+      </select>
+      <span style="font-size:11px;color:var(--text3);white-space:nowrap;">${i===_editingChain.length-1?'<strong style="color:var(--accent);">Final</strong>':'Level '+(i+1)}</span>
+      <button class="btn btn-sm btn-danger" style="padding:.2rem .45rem;" onclick="removeChainLevel(${i})" type="button">✕</button>
+    </div>`).join('');
+}
+
+function addApprovalLevel(){
+  _editingChain.push({level:_editingChain.length+1,managerId:'',managerName:''});
+  renderApprovalChainList();
+}
+
+function removeChainLevel(idx){
+  _editingChain.splice(idx,1);
+  // Renumber
+  _editingChain=_editingChain.map((l,i)=>({...l,level:i+1}));
+  renderApprovalChainList();
+}
+
+function updateChainLevel(idx,managerId){
+  const m=(S._staff||[]).find(s=>(s.staffId||s.id)===managerId);
+  _editingChain[idx].managerId=managerId;
+  _editingChain[idx].managerName=m?m.name||m.email:'';
+}
+
+function getApprovalChain(){
+  // Read current dropdown values and build chain
+  return _editingChain.filter(l=>l.managerId).map((l,i)=>({
+    level:i+1,
+    managerId:l.managerId,
+    managerName:l.managerName
+  }));
+}
+
+// ── Approval chain helpers used in KPI review flow ──────────────────────────
+
+// Get the current pending level for a given appraisal
+function getAppraisalCurrentLevel(appraisalId){
+  const approvals=getKpiApprovals(S.companyId)
+    .filter(a=>a.appraisalId===appraisalId)
+    .sort((a,b)=>a.level-b.level);
+  return approvals.length?approvals[approvals.length-1].level:0;
+}
+
+// Get the full approval chain for a staff member
+function getStaffApprovalChain(staffId){
+  const s=(S._staff||[]).find(x=>(x.staffId||x.id)===staffId);
+  return s&&s.approvalChain&&s.approvalChain.length?s.approvalChain:null;
+}
+
+// Check if logged-in manager is the correct reviewer for the next level
+function canCurrentManagerReview(appraisalId){
+  const a=getKpiAppraisals(S.companyId).find(x=>x.id===appraisalId);
+  if(!a)return false;
+  const chain=getStaffApprovalChain(a.staffId);
+  if(!chain){
+    // No chain — any manager can review
+    return S.user&&S.user.systemRole==='manager';
+  }
+  const doneLevel=getAppraisalCurrentLevel(appraisalId);
+  const nextLevel=doneLevel+1;
+  const nextInChain=chain.find(c=>c.level===nextLevel);
+  if(!nextInChain)return false; // already fully approved
+  const myId=S.user.staffId||S.user.id;
+  return nextInChain.managerId===myId;
+}
+
+// Get label for an appraisal's current chain status
+function getAppraisalChainStatus(appraisalId){
+  const a=getKpiAppraisals(S.companyId).find(x=>x.id===appraisalId);
+  if(!a)return{label:'Pending',cls:'badge-warn',doneLevel:0,chainLength:0,isFinal:false};
+  const chain=getStaffApprovalChain(a.staffId);
+  const approvals=getKpiApprovals(S.companyId).filter(x=>x.appraisalId===appraisalId);
+  const doneLevel=approvals.length?Math.max(...approvals.map(x=>x.level||1)):0;
+  const chainLength=chain?chain.length:1;
+  const isFinal=doneLevel>=chainLength;
+  if(isFinal) return{label:'Approved ✓',cls:'badge-success',doneLevel,chainLength,isFinal:true};
+  if(doneLevel>0) return{label:`Level ${doneLevel}/${chainLength} ✓ — Awaiting L${doneLevel+1}`,cls:'badge-info',doneLevel,chainLength,isFinal:false};
+  return{label:'Pending L1 Review',cls:'badge-warn',doneLevel:0,chainLength,isFinal:false};
+}
+
 function showRegisterStaff(editId){
   S.editingStaffId=editId||null;
   document.getElementById('staff-modal-title').textContent=editId?'Edit Staff':'Register New Staff';
@@ -1472,9 +1584,10 @@ function showRegisterStaff(editId){
   const rs=document.getElementById('s-role');
   rs.innerHTML='<option value="">Select role</option>'+(S._roles||[]).map(r=>`<option>${esc(r)}</option>`).join('');
   if(editId){
-    const u=getStaff(S.companyId).find(x=>x.id===editId);
+    const u=S._staff.find(x=>x.id===editId)||(S.user&&S.user.id===editId?S.user:null);
     if(u){
       document.getElementById('s-name').value=u.name||'';
+      document.getElementById('s-name').disabled=true;
       document.getElementById('s-id').value=u.staffId||u.id||'';
       document.getElementById('s-id').disabled=true;
       document.getElementById('s-email').value=u.email||'';
@@ -1483,13 +1596,17 @@ function showRegisterStaff(editId){
       document.getElementById('s-role').value=u.role||'';
       document.getElementById('s-pw').value='';
       document.getElementById('s-sys-role').value=u.systemRole||'staff';
+      _editingChain=(u.approvalChain||[]).map(l=>({...l}));
     }
   } else {
     ['s-name','s-id','s-email','s-phone','s-pw'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('s-name').disabled=false;
     document.getElementById('s-id').disabled=false;
     document.getElementById('s-dept').value='';document.getElementById('s-role').value='';
     document.getElementById('s-sys-role').value='staff';
+    _editingChain=[];
   }
+  renderApprovalChainList();
   showModal('modal-register-staff');
 }
 
@@ -1503,7 +1620,8 @@ async function saveStaffMember(){
   showLoading('Saving...');
   try{
     if(S.editingStaffId){
-      const upd={name,email:v('s-email'),phone:v('s-phone'),department:dept,role,systemRole:sysRole,updatedAt:new Date().toISOString()};
+      const chain=getApprovalChain();
+      const upd={name,email:v('s-email'),phone:v('s-phone'),department:dept,role,systemRole:sysRole,approvalChain:chain,updatedAt:new Date().toISOString()};
       if(pw&&pw.length>=6)upd.password=pw;
       await _cc(S.companyId,'staff').doc(S.editingStaffId).update(upd);
       if(S.user&&S.user.id===S.editingStaffId)Object.assign(S.user,upd);
@@ -1513,7 +1631,8 @@ async function saveStaffMember(){
       if(!pw||pw.length<6){hideLoading();showAlert('staff-form-alert','Password min 6 chars.','danger');return;}
       const ex=await _cc(S.companyId,'staff').where('staffId','==',sid).limit(1).get();
       if(!ex.empty){hideLoading();showAlert('staff-form-alert','Staff ID already exists.','danger');return;}
-      await _cc(S.companyId,'staff').add({staffId:emailVal||sid,name,email:emailVal||v('s-email').trim().toLowerCase(),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,createdAt:new Date().toISOString()});
+      const chain=getApprovalChain();
+      await _cc(S.companyId,'staff').add({staffId:emailVal||sid,name,email:emailVal||v('s-email').trim().toLowerCase(),phone:v('s-phone'),department:dept,role,password:pw,systemRole:sysRole,companyId:S.companyId,approvalChain:chain,createdAt:new Date().toISOString()});
     }
     hideLoading();closeModal('modal-register-staff');
     document.getElementById('s-id').disabled=false;
@@ -1923,40 +2042,31 @@ function renderGuide(){
     </div>
     <div class="guide-section">
       <h3>🎯 KPI Module — Manager Guide</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Dashboard tab:</strong> Overview of team performance for the selected period — average score, pending reviews, category count. Shows each staff member's score with rating badge.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup → Categories:</strong> Create performance areas (e.g. Sales, Operations, Attendance). Each category has a <strong>weighting %</strong>. All category weightings must add up to exactly 100%.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Setup → KPI Definitions:</strong> Under each category, define individual measurable KPIs with a name, measurement unit (Number, ₦ Currency, Percentage, Yes/No), and frequency (Daily/Weekly/Monthly).</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Targets tab:</strong> Assign each KPI a target value for a specific month. Select the KPI, assign to an individual staff member, an entire department, or a job role, set the target value, and select the period (YYYY-MM format, e.g. 2025-06 for June 2025).</div></div>
-      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Review tab:</strong> Three sections — (a) <strong>Pending:</strong> submitted appraisals awaiting your approval. Tap to open, review, adjust score, add feedback, and approve. (b) <strong>Approved:</strong> already reviewed this period. (c) <strong>Awaiting Submission:</strong> staff with assigned targets who have not yet submitted — useful for follow-up reminders.</div></div>
-      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Rankings tab:</strong> All staff ranked by their overall weighted score for the current period. Higher weighting categories contribute more to the final score.</div></div>
-      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Audit Trail tab:</strong> A chronological log of all KPI actions — categories created, targets assigned, appraisals submitted and approved — stored permanently in the database.</div></div>
-      <div class="guide-step"><div class="step-num">8</div><div class="step-body"><strong>Bands button:</strong> Customise score thresholds: default ≥90% = Exceeds Expectations, ≥75% = Meets Expectations, ≥60% = Developing, below 60% = Needs Improvement.</div></div>
-      <div class="guide-step"><div class="step-num">9</div><div class="step-body"><strong>Print PDF:</strong> Generates a full performance report for the selected period showing rankings, individual KPI scores, and manager feedback.</div></div>
-      <div class="guide-step"><div class="step-num">10</div><div class="step-body"><strong>Monthly/Annual cycle:</strong> Appraisals follow a monthly calendar. Each month (YYYY-MM period) is independent. All monthly scores accumulate to form the annual record. The annual score is the weighted average of all completed months.</div></div>
-    </div>`:`
-    <div class="guide-section">
-      <h3>🎯 KPI Module — My KPIs Tab</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>My KPIs</strong> tab shows all KPI targets your manager has assigned to you for the selected month.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">At the top, your <strong>Overall Score</strong> and <strong>Rating Band</strong> for the period are displayed — Exceeds Expectations, Meets Expectations, Developing, or Needs Improvement.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Each KPI card shows the KPI name, category, frequency, target value, and your current score (once approved by your manager). Tap a card to go directly to Self-Appraisal for that KPI.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Use the <strong>Period</strong> selector at the top to view a different month's targets.</div></div>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Dashboard tab:</strong> Overview of team performance — average score, pending reviews needing your action, total categories and KPIs defined. Each staff member is listed with their current period score and rating band.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setup → Categories:</strong> Create performance areas (e.g. Sales, Operations, Attendance) and assign each a % weighting. All weightings must total exactly 100%.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Setup → KPI Definitions:</strong> Define individual measurable KPIs under each category. Each KPI has a name, unit (₦ Currency, %, Number, Yes/No), and frequency (Daily/Weekly/Monthly).</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Targets tab:</strong> Assign each KPI a target value for a specific month (YYYY-MM). Assign to an individual staff member, an entire department, or a job role.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Review tab — three sections:</strong> (a) <strong>Pending My Review</strong> — appraisals at your level in the chain waiting for your action. Tap to open. (b) <strong>In Progress</strong> — appraisals that have passed your level and are now with another manager. (c) <strong>Awaiting Submission</strong> — staff who haven't submitted yet.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Rankings tab:</strong> All staff ranked by their final weighted score for the selected period. Only fully-approved (final level) scores count towards rankings.</div></div>
+      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Bands button:</strong> Customise score thresholds — default: ≥90% Exceeds, ≥75% Meets, ≥60% Developing, below 60% Needs Improvement.</div></div>
     </div>
     <div class="guide-section">
-      <h3>📝 KPI Module — Self-Appraisal Tab</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>Self-Appraisal</strong> tab lists all your assigned KPIs with their current submission status: Not Started, Draft, Submitted, or Approved.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">Tap <strong>Start Self-Appraisal →</strong> on any KPI to open the submission form. Fill in: <strong>Actual Achievement</strong> (your result), <strong>Description of Activities</strong> (what you did), optional <strong>Evidence</strong> (link or note), and your <strong>Self-Assessment Score</strong> (0–100%).</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Tap <strong>Save Draft</strong> to save your progress without submitting. You can return and continue at any time.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Tap <strong>Submit</strong> when ready for manager review. Once submitted, you cannot edit until your manager returns it. The status changes to <strong>Submitted</strong>.</div></div>
-      <div class="guide-step"><div class="step-num">5</div><div class="step-body">After your manager approves, the status changes to <strong>Approved</strong> and you will see the manager's score and any feedback comments.</div></div>
-      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Period:</strong> Each appraisal covers one calendar month (e.g. 2025-06 = June 2025). Submit one appraisal per KPI per month before your manager's review deadline.</div></div>
-    </div>
+      <h3>🔗 KPI Approval Chains — Manager Guide</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>What is an Approval Chain?</strong> Each staff member can have a personalised list of reviewers in a specific order. An appraisal must pass through every level before it is finally approved. The last level is the definitive score used for rankings and reports.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>Setting up a chain:</strong> Go to <strong>Staff → Edit</strong> on any staff member. In the KPI Approval Chain section at the bottom, click <strong>+ Add Level</strong>. Select the manager for that level from the dropdown. Repeat for each level. Level 1 reviews first; the highest level is marked <strong>Final</strong>. Save the staff record.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>Variable chains:</strong> Different staff can have different numbers of levels. A junior staff member might have 1 level (Line Manager). A senior staff might have 3 levels (Line Manager → HOD → Director). Staff with no chain set can be reviewed by any manager.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>How review works:</strong> When a staff member submits their appraisal, the Level 1 manager sees it in their <strong>Pending My Review</strong> section. They adjust the score if needed, add feedback, and tap <strong>Approve</strong>. The appraisal then moves to Level 2, and so on until the final level approves it.</div></div>
+      <div class="guide-step"><div class="step-num">5</div><div class="step-body"><strong>Score adjustment:</strong> Any manager in the chain can adjust the score from the previous level's recommendation. The review modal shows the previous level's score as a reference. The final level's score is the one used for all calculations.</div></div>
+      <div class="guide-step"><div class="step-num">6</div><div class="step-body"><strong>Viewing chain progress:</strong> In the Review tab, appraisals "In Progress" show the current level badge (e.g. L2/3) and who the next reviewer is. In the staff's My KPIs tab and Appraisal Detail, the full approval history is visible showing each level's reviewer, score, and feedback.</div></div>
+      <div class="guide-step"><div class="step-num">7</div><div class="step-body"><strong>Review modal:</strong> Shows a chain progress bar at the top — completed levels in green, your current level highlighted, future levels greyed out. The previous level's score is shown for reference, and the score input is pre-filled with the auto-calculated achievement or the previous level's score to guide your decision.</div></div>
+    </div>`:''}
     <div class="guide-section">
-      <h3>📅 KPI Module — My History Tab</h3>
-      <div class="guide-step"><div class="step-num">1</div><div class="step-body">The <strong>My History</strong> tab shows all your past approved appraisals organised by year.</div></div>
-      <div class="guide-step"><div class="step-num">2</div><div class="step-body">At the top, the <strong>Annual Score card</strong> shows your overall weighted average for the selected year and your annual rating band.</div></div>
-      <div class="guide-step"><div class="step-num">3</div><div class="step-body">Below, each <strong>completed month</strong> is listed with its score and rating. Tap any month card to see the full breakdown — individual KPI scores and manager feedback for each KPI.</div></div>
-      <div class="guide-step"><div class="step-num">4</div><div class="step-body">Use the <strong>Assessment Year</strong> dropdown to switch between years. Each year is treated as a distinct assessment cycle.</div></div>
-    </div>`}
+      <h3>🔗 KPI Approval Chains — How It Works</h3>
+      <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>What is an Approval Chain?</strong> Each staff member has a personalised list of named reviewers in a specific sequence. An appraisal passes through every level before it is finally approved. The last level's score is the definitive one used in rankings and reports.</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-body"><strong>For Staff:</strong> After submitting your self-appraisal, the status updates to show which level is reviewing (e.g. "Level 1/2 done — Awaiting L2"). Once the final level approves, your status shows <strong>✓ Fully Approved</strong>. Tap any KPI card to see each reviewer's score and feedback.</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-body"><strong>For Managers:</strong> The Review tab shows only the appraisals assigned to your level in each staff member's chain. Appraisals awaiting a different manager appear under "In Progress". You can adjust the score, add feedback, and approve to pass it to the next level.</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-body"><strong>Setting up a chain (Manager):</strong> Go to <strong>Staff → Edit</strong>. In the <strong>KPI Approval Chain</strong> section, click <strong>+ Add Level</strong>, select a manager for that level, and repeat. Level 1 reviews first; the highest level is the <strong>Final</strong> approver. Different staff can have different numbers of levels.</div></div>
+    </div>
     <div class="guide-section">
       <h3>📱 Installing as an App</h3>
       <div class="guide-step"><div class="step-num">1</div><div class="step-body"><strong>Android:</strong> Open in Chrome → tap ⋮ menu → <em>Add to Home screen</em>.</div></div>
@@ -2103,7 +2213,15 @@ function calcOverallScore(staffId,period,cid){
   const cats=getKpiCats(cid);
   const defs=getKpiDefs(cid);
   const targets=getKpiTargets(cid);
-  const approvals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&(period?a.period===period:true));
+  // Use only final-level approvals for scoring (highest level per appraisal)
+  const allApprovals=getKpiApprovals(cid).filter(a=>a.staffId===staffId&&(period?a.period===period:true));
+  // Group by appraisalId, take highest level
+  const bestByAppraisal={};
+  allApprovals.forEach(a=>{
+    const key=a.appraisalId;
+    if(!bestByAppraisal[key]||( a.level||1)>(bestByAppraisal[key].level||1))bestByAppraisal[key]=a;
+  });
+  const approvals=Object.values(bestByAppraisal);
   if(!cats.length||!approvals.length)return null;
   const totalWeight=cats.reduce((a,c)=>a+(parseFloat(c.weighting)||0),0);
   if(totalWeight===0)return null;
@@ -2310,10 +2428,46 @@ function renderKpiSubContent(){
     const approvals=getKpiApprovals(cid);
     const staffList=S._staff||[];
     const defs=getKpiDefs(cid);
+    const myId=S.user.staffId||S.user.id;
+
+    // Build: pending for ME at my level in each staff member's chain
+    const pendingForMe=[];
+    const pendingForOthers=[];
+    const approvedFinal=[];
+
+    appraisals.filter(a=>a.period===period&&a.status!=='approved').forEach(a=>{
+      if(!a.signInTime&&!a.submittedAt&&a.status==='draft')return; // skip drafts
+      const myApproval=approvals.find(ap=>ap.appraisalId===a.id&&ap.approvedBy===myId);
+      if(myApproval)return; // already done my level
+      const chain=getStaffApprovalChain(a.staffId);
+      const existingApprovals=approvals.filter(ap=>ap.appraisalId===a.id);
+      const doneLevel=existingApprovals.length?Math.max(...existingApprovals.map(x=>x.level||1)):0;
+      const nextLevel=doneLevel+1;
+      const chainLength=chain?chain.length:1;
+      if(a.status==='submitted'||a.status&&a.status.startsWith('level_')){
+        if(chain){
+          const nextInChain=chain.find(c=>c.level===nextLevel);
+          if(nextInChain&&nextInChain.managerId===myId){
+            pendingForMe.push({...a,_nextLevel:nextLevel,_chainLength:chainLength});
+          } else if(nextInChain){
+            pendingForOthers.push({...a,_nextLevel:nextLevel,_chainLength:chainLength,_nextManager:nextInChain.managerName});
+          } else {
+            pendingForMe.push({...a,_nextLevel:1,_chainLength:1}); // no chain, any manager
+          }
+        } else {
+          // No chain set — any manager can review
+          pendingForMe.push({...a,_nextLevel:1,_chainLength:1});
+        }
+      }
+    });
+
+    // Final approvals
+    appraisals.filter(a=>a.period===period&&a.status==='approved').forEach(a=>{
+      approvedFinal.push(a);
+    });
+
+    // Awaiting staff submission
     const targets=getKpiTargets(cid).filter(t=>t.period===period);
-    const pending=appraisals.filter(a=>a.period===period&&a.status==='submitted'&&!approvals.find(ap=>ap.appraisalId===a.id));
-    const done=appraisals.filter(a=>a.period===period&&approvals.find(ap=>ap.appraisalId===a.id));
-    // Staff with targets but no submission
     const submittedIds=new Set(appraisals.filter(a=>a.period===period).map(a=>a.staffId));
     const awaitingMap={};
     targets.forEach(t=>{
@@ -2330,53 +2484,81 @@ function renderKpiSubContent(){
       });
     });
     const awaiting=Object.values(awaitingMap);
+
     c.innerHTML=`
       <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Current Period: <strong style="color:var(--accent);">${period}</strong></div>
-      ${pending.length?`<div style="margin-bottom:1rem;">
-        <div class="card-title" style="margin-bottom:.6rem;">Pending Review (${pending.length})</div>
-        ${pending.map(a=>{
+
+      ${pendingForMe.length?`
+      <div style="margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:.5rem;">Pending My Review (${pendingForMe.length})</div>
+        ${pendingForMe.map(a=>{
           const def=defs.find(d=>d.id===a.kpiId);
           const s=staffList.find(x=>(x.staffId||x.id)===a.staffId);
+          const levelLabel=a._chainLength>1?`Level ${a._nextLevel}/${a._chainLength}`:'Review';
           return`<div class="appraisal-card" onclick="openKpiReviewModal('${a.id}')">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="report-avatar">${initials(s?s.name:a.staffId)}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
                 <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')} · Self-score: ${a.selfScore!=null?a.selfScore+'%':'—'}</div>
+                ${a._chainLength>1?`<div style="font-size:11px;color:var(--accent);margin-top:.15rem;">Your approval: ${levelLabel}</div>`:''}
               </div>
-              <span class="badge badge-warn">Pending</span>
+              <span class="badge badge-warn">${levelLabel}</span>
             </div>
           </div>`;
         }).join('')}
-      </div>`:'<div class="alert alert-success" style="margin-bottom:.75rem;">No pending appraisals. All submissions reviewed.</div>'}
-      ${done.length?`<div style="margin-bottom:1rem;">
-        <div class="card-title" style="margin-bottom:.6rem;">Approved This Period (${done.length})</div>
-        ${done.map(a=>{
+      </div>`:'<div class="alert alert-success" style="margin-bottom:.75rem;">No appraisals pending your review.</div>'}
+
+      ${pendingForOthers.length?`
+      <div style="margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:.5rem;">In Progress — Awaiting Another Manager (${pendingForOthers.length})</div>
+        ${pendingForOthers.map(a=>{
           const def=defs.find(d=>d.id===a.kpiId);
           const s=staffList.find(x=>(x.staffId||x.id)===a.staffId);
-          const appr=approvals.find(ap=>ap.appraisalId===a.id);
+          return`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;" onclick="showAppraisalDetail('${a.id}')">
+            <div class="report-avatar">${initials(s?s.name:a.staffId)}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;">${esc(s?s.name:a.staffId)}</div>
+              <div style="font-size:11px;color:var(--text3);">${esc(def?def.name:'?')}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span class="badge badge-info">L${a._nextLevel}/${a._chainLength}</span>
+              <div style="font-size:11px;color:var(--text3);margin-top:.2rem;">→ ${esc(a._nextManager||'Next manager')}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+
+      ${approvedFinal.length?`
+      <div style="margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:.5rem;">Fully Approved This Period (${approvedFinal.length})</div>
+        ${approvedFinal.map(a=>{
+          const def=defs.find(d=>d.id===a.kpiId);
+          const s=staffList.find(x=>(x.staffId||x.id)===a.staffId);
+          const finalApproval=approvals.filter(ap=>ap.appraisalId===a.id&&ap.isFinal).pop()
+            ||approvals.filter(ap=>ap.appraisalId===a.id).sort((x,y)=>(y.level||1)-(x.level||1))[0];
           return`<div class="appraisal-card" onclick="showAppraisalDetail('${a.id}')">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="report-avatar">${initials(s?s.name:a.staffId)}</div>
               <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(s?s.name:a.staffId)}</div>
               <div style="font-size:12px;color:var(--text3);">${esc(def?def.name:'?')}</div></div>
-              <div style="text-align:right;">${scoreRingSVG(appr?appr.managerScore:null,44)}</div>
+              <div style="text-align:right;">${scoreRingSVG(finalApproval?finalApproval.managerScore:null,44)}</div>
             </div>
           </div>`;
         }).join('')}
       </div>`:''}
-      ${awaiting.length?`<div>
-        <div class="card-title" style="margin-bottom:.6rem;">Awaiting Staff Submission (${awaiting.length})</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:.6rem;">These staff have assigned targets but have not yet submitted their appraisals.</div>
+
+      ${awaiting.length?`
+      <div>
+        <div class="card-title" style="margin-bottom:.5rem;">Awaiting Staff Submission (${awaiting.length})</div>
         ${awaiting.map(ns=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.65rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;">
           <div class="report-avatar">${initials(ns.name)}</div>
           <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${esc(ns.name)}</div>
-          <div style="font-size:11px;color:var(--text3);">${ns.kpis.slice(0,3).map(k=>esc(k)).join(', ')}${ns.kpis.length>3?' +'+( ns.kpis.length-3)+' more':''}</div></div>
+          <div style="font-size:11px;color:var(--text3);">${ns.kpis.slice(0,3).map(k=>esc(k)).join(', ')}${ns.kpis.length>3?' +'+(ns.kpis.length-3)+' more':''}</div></div>
           <span class="badge badge-info">Not submitted</span>
         </div>`).join('')}
       </div>`:''}`;
   }
-
   else if(kpiSubTab==='rankings'){
     const staff=S._staff||[];
     const period=currentKpiPeriod();
@@ -2864,7 +3046,32 @@ function openKpiReviewModal(appraisalId){
   // Achievement bar width
   const pct=autoScore!==null?Math.min(100,autoScore):0;
   const barColor=pct>=90?'var(--success)':pct>=75?'var(--accent)':pct>=60?'var(--warn)':'var(--danger)';
+  // Chain context for this review
+  const chain2=getStaffApprovalChain(a.staffId);
+  const existingApprovals2=getKpiApprovals(S.companyId).filter(x=>x.appraisalId===appraisalId);
+  const doneLevel2=existingApprovals2.length?Math.max(...existingApprovals2.map(x=>x.level||1)):0;
+  const thisLevel2=doneLevel2+1;
+  const chainLength2=chain2?chain2.length:1;
+  const isFinal2=thisLevel2>=chainLength2;
+  const prevApproval=existingApprovals2.length?existingApprovals2.sort((a,b)=>(b.level||1)-(a.level||1))[0]:null;
+
+  // Update modal title with level info
+  const reviewTitle=document.querySelector('#modal-kpi-review .modal-title');
+  if(reviewTitle)reviewTitle.textContent=chainLength2>1?`Level ${thisLevel2}/${chainLength2} Review${isFinal2?' (Final)':''}`:'Review & Approve';
+
   document.getElementById('kpi-review-content').innerHTML=`
+    ${chainLength2>1?`<div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.6rem .85rem;margin-bottom:.75rem;font-size:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+        <strong style="color:var(--accent);">Approval Chain — Your Level: ${thisLevel2}/${chainLength2}</strong>
+        <span class="badge ${isFinal2?'badge-success':'badge-warn'}">${isFinal2?'Final Approver':'Intermediate'}</span>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        ${(chain2||[]).map(l=>`<span style="font-size:11px;padding:.2rem .55rem;border-radius:12px;background:${l.level===thisLevel2?'rgba(0,212,170,.2)':existingApprovals2.find(ap=>ap.level===l.level)?'rgba(34,197,94,.12)':'var(--bg4)'};color:${l.level===thisLevel2?'var(--accent)':existingApprovals2.find(ap=>ap.level===l.level)?'var(--success)':'var(--text3)'};">${existingApprovals2.find(ap=>ap.level===l.level)?'✓':l.level===thisLevel2?'▶':'○'} L${l.level}: ${esc(l.managerName)}</span>`).join('')}
+      </div>
+    </div>`:''}
+    ${prevApproval?`<div style="background:rgba(0,153,255,.06);border:1px solid rgba(0,153,255,.2);border-radius:8px;padding:.6rem .85rem;margin-bottom:.75rem;font-size:12px;">
+      <div style="color:var(--text3);margin-bottom:.2rem;">Level ${prevApproval.level} review by ${esc(prevApproval.approvedBy)}: <strong style="color:var(--accent);">${prevApproval.managerScore}%</strong>${prevApproval.comment?` — "${esc(prevApproval.comment)}"`:''}</div>
+    </div>`:''}
     <div style="background:var(--bg3);border-radius:12px;padding:1rem;margin-bottom:.75rem;">
       <div style="font-weight:700;font-size:14px;margin-bottom:.6rem;">${esc(staff?staff.name:a.staffId)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem .75rem;font-size:12px;margin-bottom:.75rem;">
@@ -2892,7 +3099,8 @@ function openKpiReviewModal(appraisalId){
         ${autoScore!==null?`<span style="color:var(--text3);">Auto-calc: <strong>${autoScore}%</strong></span>`:''}
       </div>
     </div>`;
-  document.getElementById('kr-score').value=autoScore!==null?autoScore:(a.selfScore||'');
+  // Suggest previous level score or auto-calc or self-score as starting point
+  document.getElementById('kr-score').value=prevApproval?prevApproval.managerScore:(autoScore!==null?autoScore:(a.selfScore||''));
   document.getElementById('kr-comment').value='';
   hideAlert('kpi-review-alert');
   showModal('modal-kpi-review');
@@ -2903,44 +3111,92 @@ async function approveAppraisal(){
   const a=getKpiAppraisals(S.companyId).find(x=>x.id===currentAppraisalId);if(!a)return;
   showLoading('Approving…');
   try{
-    // Check not already approved
-    const existApproval=await _cc(S.companyId,'kpiApprovals').where('appraisalId','==',currentAppraisalId).limit(1).get();
-    if(!existApproval.empty){
-      // Update existing approval
-      await existApproval.docs[0].ref.update({managerScore:score,comment:v('kr-comment'),approvedAt:new Date().toISOString()});
-    } else {
-      await _cc(S.companyId,'kpiApprovals').add({
-        appraisalId:currentAppraisalId,staffId:a.staffId,kpiId:a.kpiId,
-        period:a.period,managerScore:score,comment:v('kr-comment'),
-        approvedBy:S.user.staffId||S.user.id,approvedAt:new Date().toISOString(),companyId:S.companyId
-      });
-    }
-    await _cc(S.companyId,'kpiAppraisals').doc(currentAppraisalId).update({status:'approved'});
+    const myId=S.user.staffId||S.user.id;
+    const chain=getStaffApprovalChain(a.staffId);
+    // Determine which level this approval is
+    const existingApprovals=getKpiApprovals(S.companyId).filter(x=>x.appraisalId===currentAppraisalId);
+    const doneLevel=existingApprovals.length?Math.max(...existingApprovals.map(x=>x.level||1)):0;
+    const thisLevel=doneLevel+1;
+    const chainLength=chain?chain.length:1;
+    const isFinal=thisLevel>=chainLength;
+
+    // Save this level approval
+    await _cc(S.companyId,'kpiApprovals').add({
+      appraisalId:currentAppraisalId,staffId:a.staffId,kpiId:a.kpiId,
+      period:a.period,managerScore:score,adjustedScore:score,
+      comment:v('kr-comment'),approvedBy:myId,
+      approvedAt:new Date().toISOString(),companyId:S.companyId,
+      level:thisLevel,chainLength,isFinal
+    });
+
+    // Update appraisal status
+    const nextStatus=isFinal?'approved':('level_'+thisLevel+'_done');
+    await _cc(S.companyId,'kpiAppraisals').doc(currentAppraisalId).update({
+      status:nextStatus,
+      currentLevel:thisLevel,
+      finalScore:isFinal?score:null
+    });
+
     const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
     const staffMember=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
-    await addAudit(S.companyId,'Appraisal Approved',`${staffMember?staffMember.name:a.staffId} — ${def?def.name:'?'}: ${score}%`);
-    hideLoading();closeModal('modal-kpi-review');await renderKpiTab();
+    const levelLabel=isFinal?'Final Approval':'Level '+thisLevel+'/'+chainLength+' Approved';
+    await addAudit(S.companyId,levelLabel,
+      `${staffMember?staffMember.name:a.staffId} — ${def?def.name:'?'}: ${score}% by ${S.user.name||myId}`);
+
+    hideLoading();closeModal('modal-kpi-review');
+    if(isFinal){
+      showAlert('main-alert','Final approval recorded. Score: '+score+'%','success');
+    } else {
+      const nextInChain=chain?chain.find(c=>c.level===thisLevel+1):null;
+      showAlert('main-alert',
+        `Level ${thisLevel} approved. ${nextInChain?'Sent to '+nextInChain.managerName+' for Level '+(thisLevel+1)+' review.':''}`,
+        'success');
+    }
+    setTimeout(()=>hideAlert('main-alert'),5000);
+    await renderKpiTab();
   }catch(e){hideLoading();showAlert('kpi-review-alert','Error: '+e.message,'danger');}
 }
 
 function showAppraisalDetail(appraisalId){
   const a=getKpiAppraisals(S.companyId).find(x=>x.id===appraisalId);if(!a)return;
-  const appr=getKpiApprovals(S.companyId).find(x=>x.appraisalId===appraisalId);
+  const allApprovals=getKpiApprovals(S.companyId)
+    .filter(x=>x.appraisalId===appraisalId)
+    .sort((x,y)=>(x.level||1)-(y.level||1));
+  const finalApproval=allApprovals.filter(x=>x.isFinal).pop()||allApprovals[allApprovals.length-1];
   const def=getKpiDefs(S.companyId).find(d=>d.id===a.kpiId);
   const staff=(S._staff||[]).find(s=>(s.staffId||s.id)===a.staffId);
+  const chain=getStaffApprovalChain(a.staffId);
+  const chainLength=chain?chain.length:1;
+  const statusLabel=a.status==='approved'?'Fully Approved':
+    allApprovals.length?'Level '+allApprovals.length+'/'+chainLength+' done':'Submitted';
   document.getElementById('kpi-detail-content').innerHTML=`
     <div class="modal-title">${esc(staff?staff.name:a.staffId)} — ${esc(def?def.name:'KPI')}</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:.9rem;">Period: ${a.period}</div>
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Self Score</div><div class="stat-val">${a.selfScore}%</div></div>
-      <div class="stat-card"><div class="stat-label">Manager Score</div><div class="stat-val accent">${appr?appr.managerScore+'%':'—'}</div></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.75rem;">Period: ${a.period}</div>
+    <div style="display:flex;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap;">
+      <div class="stat-card" style="flex:1;"><div class="stat-label">Self Score</div><div class="stat-val">${a.selfScore!=null?a.selfScore+'%':'—'}</div></div>
+      <div class="stat-card" style="flex:1;"><div class="stat-label">Final Score</div><div class="stat-val accent">${finalApproval?finalApproval.managerScore+'%':'Pending'}</div></div>
+      <div class="stat-card" style="flex:1;"><div class="stat-label">Status</div><div class="stat-val" style="font-size:12px;">${statusLabel}</div></div>
     </div>
-    <div style="background:var(--bg3);border-radius:10px;padding:.85rem;margin-top:.5rem;font-size:13px;line-height:1.65;">
+    <div style="background:var(--bg3);border-radius:10px;padding:.85rem;font-size:13px;line-height:1.65;margin-bottom:.75rem;">
       <div><strong>Actual:</strong> ${esc(a.actualValue)}</div>
       <div style="margin-top:.3rem;"><strong>Activities:</strong> ${esc(a.description)}</div>
       ${a.evidenceNote?`<div style="margin-top:.3rem;"><strong>Evidence:</strong> ${esc(a.evidenceNote)}</div>`:''}
-      ${appr&&appr.comment?`<div style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem;color:var(--accent);"><strong>Manager Feedback:</strong> ${esc(appr.comment)}</div>`:''}
-    </div>`;
+    </div>
+    ${allApprovals.length?`
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.5rem;">Approval History</div>
+    ${allApprovals.map(ap=>{
+      const chainEntry=chain?chain.find(c=>c.level===ap.level):null;
+      const reviewerName=chainEntry?chainEntry.managerName:ap.approvedBy;
+      const borderColor=ap.isFinal?'var(--success)':'var(--accent)';
+      return`<div style="background:var(--bg3);border-radius:8px;padding:.65rem .85rem;margin-bottom:.4rem;border-left:3px solid ${borderColor};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem;">
+          <span style="font-size:12px;font-weight:600;">${ap.isFinal?'✓ Final — ':'Level '+ap.level+'/'+chainLength+' — '}${esc(reviewerName)}</span>
+          <span style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">${ap.managerScore}%</span>
+        </div>
+        ${ap.comment?`<div style="font-size:12px;color:var(--text2);">"${esc(ap.comment)}"</div>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-top:.15rem;">${new Date(ap.approvedAt).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>`;
+    }).join('')}`:'<div style="font-size:12px;color:var(--text3);">No approvals yet.</div>'}`;
   showModal('modal-kpi-detail');
 }
 
