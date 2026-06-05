@@ -152,6 +152,13 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
       <div class="form-group"><label>Company Code * <span style="font-size:11px;color:var(--text3);font-weight:400;">(staff use this to log in)</span></label><input type="text" id="cf-code" placeholder="e.g. CSL01" style="text-transform:uppercase;font-family:var(--font-mono);letter-spacing:1px;" oninput="this.value=this.value.toUpperCase()"/></div>
       <div class="form-group"><label>Status</label><select id="cf-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
     </div>
+    <div class="form-group">
+      <label>Charge-Out Rate (₦ per minute)
+        <span style="font-size:11px;color:var(--text3);font-weight:400;"> — task value = duration × this rate</span>
+      </label>
+      <input type="number" id="cf-rate" min="0" step="0.01" placeholder="e.g. 500 means ₦500 per minute" style="font-family:var(--font-mono);"/>
+      <div style="font-size:11px;color:var(--text3);margin-top:.25rem;">Leave blank or 0 to allow staff to enter task values manually.</div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Brand Color</label><input type="color" id="cf-color" value="#00d4aa"/></div>
       <div class="form-group"><label>Text Color</label><input type="color" id="cf-tcolor" value="#0a0f1e"/></div>
@@ -330,7 +337,7 @@ function renderCompanyList(companies){
       <div class="co-avatar" style="background:${bg};color:${tc};">${l}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:600;font-size:15px;">${esc(co.name)} ${co.status==='inactive'?'<span style="font-size:11px;background:rgba(239,68,68,.15);color:#ef4444;padding:.1rem .4rem;border-radius:4px;">INACTIVE</span>':''}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(co.industry||'')}${co.country?' · '+esc(co.country):''}${co.code?' · Code: <strong style="color:var(--accent);font-family:var(--font-mono);">'+esc(co.code)+'</strong>':''}</div>
+        <div style="font-size:12px;color:var(--text3);">${esc(co.industry||'')}${co.country?' · '+esc(co.country):''}${co.code?' · Code: <strong style="color:var(--accent);font-family:var(--font-mono);">'+esc(co.code)+'</strong>':''}${co.chargeRatePerMinute?' · Rate: <strong style="color:var(--accent);">₦'+co.chargeRatePerMinute+'/min</strong>':''}</div>
         ${co.email?`<div style="font-size:12px;color:var(--text3);">${esc(co.email)}</div>`:''}
       </div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
@@ -372,6 +379,7 @@ async function showCompanyDetail(coId){
           <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${esc(s.name||s.email||s.staffId)}</div>
           <div style="font-size:11px;color:var(--text3);">${esc(s.email||'')} · ${esc(s.role||'')} · ${esc(s.department||'')}</div></div>
           <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+          ${s.status==='inactive'?'<span class="badge badge-danger" style="margin-left:4px;">Inactive</span>':''}
         </div>`).join(''):'<p style="color:var(--text3);font-size:13px;">No staff registered.</p>'}`;
     showModal('modal-co-detail');
   }catch(e){hideLoading();alert('Error: '+e.message);}
@@ -383,6 +391,7 @@ function openAddCompanyModal(){
   document.getElementById('co-modal-title').textContent='Register New Company';
   ['cf-name','cf-industry','cf-country','cf-contact','cf-email','cf-phone','cf-address','cf-code'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cf-status').value='active';
+  document.getElementById('cf-rate').value='';
   document.getElementById('cf-color').value='#00d4aa';document.getElementById('cf-tcolor').value='#0a0f1e';
   hideAlert('co-form-alert');showModal('modal-add-company');
 }
@@ -398,6 +407,7 @@ async function openEditCompany(coId){
     document.getElementById('cf-address').value=co.address||'';
     document.getElementById('cf-code').value=co.code||'';
     document.getElementById('cf-status').value=co.status||'active';
+    document.getElementById('cf-rate').value=co.chargeRatePerMinute||'';
     document.getElementById('cf-color').value=co.color||'#00d4aa';document.getElementById('cf-tcolor').value=co.textColor||'#0a0f1e';
     hideAlert('co-form-alert');showModal('modal-add-company');
   }catch(e){hideLoading();alert('Error: '+e.message);}
@@ -420,7 +430,8 @@ async function saveCompany(){
       return;
     }
     showLoading('Saving…');
-    const data={name,industry:v('cf-industry'),country:v('cf-country'),contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),code,status:v('cf-status')||'active',updatedAt:new Date().toISOString()};
+    const rateRaw=parseFloat(document.getElementById('cf-rate').value)||0;
+    const data={name,industry:v('cf-industry'),country:v('cf-country'),contactPerson:v('cf-contact'),email:v('cf-email'),phone:v('cf-phone'),address:v('cf-address'),color:v('cf-color'),textColor:v('cf-tcolor'),code,status:v('cf-status')||'active',chargeRatePerMinute:rateRaw,updatedAt:new Date().toISOString()};
     if(_editingCompanyId){await _db.collection('companies').doc(_editingCompanyId).update(data);}
     else{data.createdAt=new Date().toISOString();await _db.collection('companies').add(data);}
     hideLoading();closeModal('modal-add-company');loadDashboard();

@@ -900,7 +900,7 @@ const saveJobRoles=()=>{};
 // ========================================
 //  STATE
 // ========================================
-let S={companyId:null,company:null,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null,signoutLoc:null,reportTab:'daily',editingStaffId:null,_staff:[],_depts:[],_roles:[]};
+let S={companyId:null,company:null,chargeRate:0,user:null,signedIn:false,todayLog:null,tasks:[],currentLoc:null,signoutLoc:null,reportTab:'daily',editingStaffId:null,_staff:[],_depts:[],_roles:[]};
 
 // ========================================
 //  THEME
@@ -1124,6 +1124,7 @@ async function doLogin(){
     if(snap.empty){hideLoading();showAlert('login-alert','Invalid email or password.','danger');return;}
     const staffDoc={id:snap.docs[0].id,...snap.docs[0].data()};
     if(staffDoc.password!==pw){hideLoading();showAlert('login-alert','Invalid email or password.','danger');return;}
+    if(staffDoc.status==='inactive'){hideLoading();showAlert('login-alert','Your account has been deactivated. Please contact your manager.','danger');return;}
     S.user=staffDoc;
     await loadSession();
     hideLoading();
@@ -1142,6 +1143,8 @@ async function loadSession(){
     document.getElementById(id).classList.toggle('hidden',!isManager);
   });
   document.getElementById('nav-kpi').classList.remove('hidden');
+  // Load charge-out rate from company record
+  S.chargeRate=parseFloat(S.company&&S.company.chargeRatePerMinute)||0;
   S._staff = await getStaffAsync(S.companyId);
   // Load depts/roles — no hardcoded defaults, must be user-defined via Dept/Roles modal
   const deptsDoc=await getSettingsAsync(S.companyId,'departments');
@@ -1314,16 +1317,28 @@ async function doSignIn(){
 // ========================================
 function initiateSignOut(){
   if(S.tasks.length===0){showAlert('main-alert','Add at least one completed task before signing out.','warn');switchTab('tasks');return;}
-  const invalid=S.tasks.filter(t=>!t.description||!t.description.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0)||t.completion===undefined||t.completion===''||t.completion===null);
-  if(invalid.length){showAlert('main-alert','All tasks must have a description, duration, value, and completion % before signing out.','warn');switchTab('tasks');return;}
+  const invalid=S.tasks.filter(t=>{
+    if(!t.description||!t.description.trim())return true;
+    if(!(parseInt(t.duration)||0))return true;
+    if(!S.chargeRate&&!(parseFloat((t.value||'').replace(/,/g,''))||0))return true;
+    if(t.completion===undefined||t.completion===''||t.completion===null)return true;
+    return false;
+  });
+  if(invalid.length){showAlert('main-alert','All tasks must have a description, duration'+(S.chargeRate>0?'':',  value')+', and completion % before signing out.','warn');switchTab('tasks');return;}
   showReview();
 }
 
 function showReview(){
   if(!S.todayLog||!S.todayLog.signInTime){showAlert('main-alert','Please sign in first.','warn');return;}
   if(S.tasks.length===0){showAlert('main-alert','No tasks to review.','warn');return;}
-  const invalid=S.tasks.filter(t=>!t.description?.trim()||!(parseFloat((t.value||'').replace(/,/g,''))||0)||!(parseInt(t.duration)||0)||t.completion===undefined||t.completion===null||t.completion==='');
-  if(invalid.length){showAlert('main-alert','All tasks require a description, duration, value, and completion %.','warn');return;}
+  const invalid=S.tasks.filter(t=>{
+    if(!t.description?.trim())return true;
+    if(!(parseInt(t.duration)||0))return true;
+    if(!S.chargeRate&&!(parseFloat((t.value||'').replace(/,/g,''))||0))return true;
+    if(t.completion===undefined||t.completion===null||t.completion==='')return true;
+    return false;
+  });
+  if(invalid.length){showAlert('main-alert','All tasks require a description, duration'+(S.chargeRate>0?'':' and value')+', and completion %.','warn');return;}
   hideAlert('review-alert');
   const list=document.getElementById('review-task-list');
   list.innerHTML=S.tasks.map((t,i)=>{
@@ -1456,18 +1471,21 @@ function renderTasks(){
       <div class="form-row" style="gap:.6rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:12px;">Duration (minutes) <span class="req">*</span></label>
-          <input type="number" min="1" placeholder="e.g. 60" value="${t.duration||''}" onchange="updateTask(${i},'duration',this.value)" style="font-family:var(--font-mono);"/>
+          <input type="number" min="1" placeholder="e.g. 60" value="${t.duration||''}"
+            onchange="updateTaskDuration(${i},this.value)"
+            style="font-family:var(--font-mono);"/>
         </div>
         <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Value Added (₦) <span class="req">*</span></label>
+          <label style="font-size:12px;">Value Added (₦)
+            ${S.chargeRate>0?'<span style=\'font-size:10px;color:var(--accent);font-weight:400;\'> · Auto (₦'+S.chargeRate+'/min)</span>':'<span class=\'req\'>*</span>'}
+          </label>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="value-prefix">₦</span>
-            <input type="text" inputmode="numeric" placeholder="0" value="${t.value||''}"
-              onchange="updateTaskValue(${i},this.value)"
-              oninput="formatValueInput(this)"
-              style="font-family:var(--font-mono);flex:1;"/>
+            <input type="text" inputmode="numeric" placeholder="${S.chargeRate>0?'Auto-calculated':'0'}"
+              value="${t.value||''}"
+              ${S.chargeRate>0?'readonly style="font-family:var(--font-mono);flex:1;background:var(--bg4);color:var(--accent);cursor:not-allowed;border-color:rgba(0,212,170,.3);"':'onchange="updateTaskValue('+i+',this.value)" oninput="formatValueInput(this)" style="font-family:var(--font-mono);flex:1;"'}/>
           </div>
-          <div class="field-error" id="val-err-${i}" style="display:none;">Enter a valid amount > 0</div>
+          ${S.chargeRate>0?'<div style="font-size:11px;color:var(--accent);margin-top:.2rem;">Duration × ₦'+S.chargeRate+'/min = ₦${fmtNum((parseInt(t.duration)||0)*S.chargeRate)}</div>':'<div class="field-error" id="val-err-'+i+'" style="display:none;">Enter a valid amount > 0</div>'}
         </div>
       </div>
       <!-- Completion percentage row -->
@@ -1494,12 +1512,28 @@ function renderTasks(){
 }
 
 function addTask(){
-  S.tasks.push({description:'',duration:'',value:'',completion:0});
+  S.tasks.push({description:'',duration:'',value:'',completion:0,isNew:true});
   renderTasks();saveTasks();
   setTimeout(()=>{const items=document.querySelectorAll('.task-item');if(items.length)items[items.length-1].scrollIntoView({behavior:'smooth',block:'center'});},80);
 }
 function removeTask(i){S.tasks.splice(i,1);renderTasks();saveTasks();}
 function updateTask(i,field,val){S.tasks[i][field]=val;updateTaskTotals();saveTasks();}
+function updateTaskDuration(i,val){
+  S.tasks[i].duration=val;
+  // Auto-calculate value if charge rate is set
+  if(S.chargeRate>0){
+    const mins=parseInt(val)||0;
+    const autoVal=fmtNum(mins*S.chargeRate);
+    S.tasks[i].value=autoVal;
+    // Update the value input field directly
+    const taskItems=document.querySelectorAll('.task-item');
+    if(taskItems[i]){
+      const valueInput=taskItems[i].querySelector('input[readonly]');
+      if(valueInput)valueInput.value=autoVal;
+    }
+  }
+  updateTaskTotals();saveTasks();
+}
 function updateTaskValue(i,raw){
   const num=parseFloat(raw.replace(/,/g,''))||0;
   const err=document.getElementById('val-err-'+i);
@@ -1550,7 +1584,7 @@ async function renderStaffList(){
           <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;">${esc(s.name||s.staffId)}</div>
           <div style="font-size:12px;color:var(--text3);">${esc(s.staffId||'')} ${esc(s.role||'')} ${esc(s.department||'')}</div>
         </div>
-        <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+        <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>${s.status==='inactive'?'<span class="badge badge-danger" style="margin-left:4px;font-size:10px;">Inactive</span>':''}
       </div>`).join('');
   }catch(e){c.innerHTML='<p style="color:var(--danger);">Error: '+e.message+'</p>';}
 }
@@ -1734,42 +1768,104 @@ async function saveStaffMember(){
   }catch(e){hideLoading();showAlert('staff-form-alert','Error: '+e.message,'danger');}
 }
 
-function showStaffDetail(staffId){
-  const staff=getStaff(S.companyId);
-  const s=staff.find(x=>x.id===staffId);if(!s)return;
-  const logs=getLogs(S.companyId).filter(l=>l.staffId===staffId);
-  const totalVal=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseFloat((t.value||'').replace(/,/g,''))||0),0),0);
-  const totalMins=logs.reduce((a,l)=>a+(l.tasks||[]).reduce((b,t)=>b+(parseInt(t.duration)||0),0),0);
-  document.getElementById('staff-detail-content').innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
-      <div style="width:50px;height:50px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:19px;color:var(--accent);">${initials(s.name)}</div>
-      <div>
-        <div style="font-size:16px;font-weight:600;">${esc(s.name)}</div>
-        <div style="font-size:12px;color:var(--text3);">${esc(s.id)} · ${esc(s.role||'')} · ${esc(s.department||'')}</div>
-        <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}" style="margin-top:3px;">${s.systemRole==='manager'?'Manager':'Staff'}</span>
-      </div>
-    </div>
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
-    </div>
-    ${s.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(s.email)}</div>`:''}
-    ${s.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(s.phone)}</div>`:''}
-    <div style="display:flex;gap:.6rem;margin-top:.9rem;">
-      <button class="btn btn-sm" style="flex:1;justify-content:center;" onclick="closeModal('modal-staff-detail');showRegisterStaff('${s.id}')">Edit</button>
-      <button class="btn btn-sm ${s.systemRole==='manager'?'btn-danger':''}" style="flex:1;justify-content:center;" onclick="toggleManagerRole('${s.id}')">
-        ${s.systemRole==='manager'?'Remove Manager':'Make Manager'}
-      </button>
-    </div>`;
+async function showStaffDetail(staffId){
+  const s=S._staff.find(x=>x.id===staffId);
+  if(!s)return;
+  document.getElementById('staff-detail-content').innerHTML='<p style="color:var(--text3);">Loading…</p>';
   showModal('modal-staff-detail');
+  try{
+    const uid=s.staffId||s.id;
+    const logs=await getLogsAsync(S.companyId,{staffId:uid});
+    const totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
+    const totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+    const hasTransactions=logs.length>0;
+    const isInactive=s.status==='inactive';
+    document.getElementById('staff-detail-content').innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+        <div style="width:50px;height:50px;border-radius:12px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:19px;color:${isInactive?'var(--danger)':'var(--accent)'};">${initials(s.name||s.staffId||'?')}</div>
+        <div>
+          <div style="font-size:16px;font-weight:600;">${esc(s.name||s.staffId)}</div>
+          <div style="font-size:12px;color:var(--text3);">${esc(uid)} · ${esc(s.role||'')} · ${esc(s.department||'')}</div>
+          <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;">
+            <span class="badge ${s.systemRole==='manager'?'badge-warn':'badge-info'}">${s.systemRole==='manager'?'Manager':'Staff'}</span>
+            ${isInactive?'<span class="badge badge-danger">Inactive — Cannot Login</span>':'<span class="badge badge-success">Active</span>'}
+          </div>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Days Logged</div><div class="stat-val">${logs.filter(l=>l.signOutTime).length}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val">${minsToHours(totalMins)}</div></div>
+      </div>
+      ${s.email?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📧 ${esc(s.email)}</div>`:''}
+      ${s.phone?`<div style="font-size:13px;color:var(--text2);margin-bottom:.3rem;">📱 ${esc(s.phone)}</div>`:''}
+      ${s.approvalChain&&s.approvalChain.length?`
+        <div style="margin-top:.6rem;background:var(--bg3);border-radius:8px;padding:.65rem .85rem;">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem;">KPI Approval Chain</div>
+          ${s.approvalChain.map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:.3rem;">
+            <div style="width:20px;height:20px;border-radius:50%;background:rgba(0,212,170,.15);color:var(--accent);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${l.level}</div>
+            <span style="font-size:12px;">${esc(l.managerName||l.managerId)}</span>
+            ${i===s.approvalChain.length-1?'<span style="font-size:10px;color:var(--accent);margin-left:auto;">Final</span>':''}
+          </div>`).join('')}
+        </div>`:''}
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.85rem;">
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center;" onclick="closeModal('modal-staff-detail');showRegisterStaff('${staffId}')">✏ Edit Profile</button>
+          <button class="btn btn-sm ${s.systemRole==='manager'?'btn-danger':''}" style="flex:1;justify-content:center;" onclick="toggleManagerRole('${staffId}','${s.systemRole||'staff'}')">
+            ${s.systemRole==='manager'?'Remove Manager':'Make Manager'}
+          </button>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-sm" style="flex:1;justify-content:center;background:${isInactive?'var(--success)':'var(--warn)'};border-color:${isInactive?'var(--success)':'var(--warn)'};color:${isInactive?'#fff':'#0a0f1e'};" onclick="toggleStaffStatus('${staffId}','${s.status||'active'}')">
+            ${isInactive?'✓ Reactivate':'⊘ Deactivate'}
+          </button>
+          <button class="btn btn-sm btn-danger" style="flex:1;justify-content:center;" onclick="deleteStaffMember('${staffId}','${esc(s.name||uid)}',${hasTransactions})">
+            🗑 Delete
+          </button>
+        </div>
+        ${hasTransactions?'<div style="font-size:11px;color:var(--text3);text-align:center;">Delete is blocked — this staff has existing records. Deactivate instead.</div>':''}
+      </div>`;
+  }catch(e){document.getElementById('staff-detail-content').innerHTML='<p style="color:var(--danger);">Error: '+e.message+'</p>';}
+}
+
+async function toggleStaffStatus(docId,currentStatus){
+  const newStatus=currentStatus==='inactive'?'active':'inactive';
+  const label=newStatus==='inactive'?'Deactivate':'Reactivate';
+  if(!confirm(label+' this staff account?\n\n'+(newStatus==='inactive'?'They will not be able to log in until reactivated. All their records are preserved.':'They will be able to log in again.')))return;
+  showLoading(label+'ing…');
+  try{
+    await _cc(S.companyId,'staff').doc(docId).update({status:newStatus,updatedAt:new Date().toISOString()});
+    S._staff=await getStaffAsync(S.companyId);
+    hideLoading();closeModal('modal-staff-detail');renderStaffList();
+    showAlert('main-alert',label+'d successfully.','success');
+    setTimeout(()=>hideAlert('main-alert'),3000);
+  }catch(e){hideLoading();alert('Error: '+e.message);}
+}
+
+async function deleteStaffMember(docId,name,hasTransactions){
+  if(hasTransactions){
+    alert('"'+name+'" has existing transaction records and cannot be deleted.\n\nUse Deactivate instead — this prevents login while keeping all records intact.');
+    return;
+  }
+  if(!confirm('Permanently delete "'+name+'"?\n\nThis cannot be undone. Only possible because this staff has no transaction records.'))return;
+  showLoading('Deleting…');
+  try{
+    await _cc(S.companyId,'staff').doc(docId).delete();
+    S._staff=S._staff.filter(x=>x.id!==docId);
+    hideLoading();closeModal('modal-staff-detail');renderStaffList();
+    showAlert('main-alert','"'+name+'" deleted.','success');
+    setTimeout(()=>hideAlert('main-alert'),3000);
+  }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
 async function toggleManagerRole(docId,current){
-  showLoading('Updating...');
+  showLoading('Updating…');
   try{
-    await _cc(S.companyId,'staff').doc(docId).update({systemRole:current==='manager'?'staff':'manager'});
-    hideLoading();closeModal('modal-staff-detail');await renderStaffList();
+    const newRole=current==='manager'?'staff':'manager';
+    await _cc(S.companyId,'staff').doc(docId).update({systemRole:newRole});
+    S._staff=await getStaffAsync(S.companyId);
+    hideLoading();closeModal('modal-staff-detail');renderStaffList();
   }catch(e){hideLoading();alert('Error: '+e.message);}
 }
 
