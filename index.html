@@ -2173,10 +2173,67 @@ async function renderReportContent(){
   }
 }
 
-function showLogDetail(logId){
+async function showLogDetail(logId){
   const l=(window._logsCache&&window._logsCache[logId]);if(!l)return;
   const val=calcLogVal(l);const mins=calcLogMins(l);
-  document.getElementById('report-detail-content').innerHTML=`
+
+  // Helper: detect if a stored address is too vague (state/country level only)
+  function isVagueAddress(addr){
+    if(!addr)return true;
+    const lower=addr.toLowerCase();
+    // Vague if it only mentions state/country with no street info
+    const vaguePatterns=[/^[a-z\s]+state,\s*[a-z]+$/i,/^[a-z\s]+,\s*[a-z]+$/i];
+    const words=addr.split(',').map(s=>s.trim()).filter(Boolean);
+    return words.length<=2; // only 1-2 parts = state+country level
+  }
+
+  // Helper: format a location object into a rich display block
+  async function buildLocationHtml(loc,label,borderColor,labelColor){
+    if(!loc)return'';
+    let address=loc.address||'';
+    let coords=loc.coords||(loc.lat&&loc.lng?`${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`:'');
+    let freshAddress=false;
+
+    // If address is vague AND we have lat/lng, re-geocode from Nominatim right now
+    if(isVagueAddress(address)&&loc.lat&&loc.lng){
+      try{
+        const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18&addressdetails=1`,
+          {headers:{'Accept-Language':'en','User-Agent':'CittaWorksX/1.0'}});
+        const d=await r.json();
+        const a=d.address||{};
+        const building=a.amenity||a.building||a.office||a.shop||a.retail||null;
+        const houseNum=a.house_number||'';
+        const road=a.road||a.pedestrian||a.footway||a.path||null;
+        const streetLine=road?(houseNum?houseNum+' '+road:road):null;
+        const area=a.neighbourhood||a.quarter||a.suburb||a.city_district||null;
+        const district=a.county||a.district||null;
+        const city=a.city||a.town||a.municipality||a.village||null;
+        const postcode=a.postcode||null;
+        const state=a.state||a.province||null;
+        const country=a.country||null;
+        const parts=[building,streetLine,area,district,city,postcode,state,country].filter(Boolean);
+        if(parts.length>2){
+          address=parts.join(', ');
+          freshAddress=true;
+        }
+      }catch(e){/* keep original */}
+    }
+
+    const mapsUrl=loc.lat&&loc.lng?`https://maps.google.com/?q=${loc.lat},${loc.lng}`:'';
+    return`<div style="padding:.85rem 1rem;background:var(--bg3);border-radius:10px;font-size:12px;margin-bottom:.5rem;border-left:3px solid ${borderColor};">
+      <div style="font-weight:600;color:${labelColor};margin-bottom:.4rem;">${label}</div>
+      <div style="color:var(--text);font-size:13px;line-height:1.5;margin-bottom:.4rem;">${esc(address)||'Address not recorded'}</div>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        ${loc.accuracy?`<span style="color:var(--text3);">±${loc.accuracy}m accuracy</span>`:''}
+        ${coords?`<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3);">${esc(coords)}</span>`:''}
+        ${mapsUrl?`<a href="${mapsUrl}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">View on Maps ↗</a>`:''}
+        ${freshAddress?`<span style="color:var(--text3);font-size:10px;font-style:italic;">address retrieved from GPS</span>`:''}
+      </div>
+    </div>`;
+  }
+
+  // Render skeleton immediately, then fill in location async
+  const baseHtml=`
     <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;margin-bottom:.9rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-label">In</div><div class="stat-val">${l.signInTime?fmtTime(l.signInTime):'—'}</div></div>
@@ -2184,26 +2241,8 @@ function showLogDetail(logId){
       <div class="stat-card"><div class="stat-label">Hours</div><div class="stat-val accent">${minsToHours(mins)}</div></div>
       <div class="stat-card"><div class="stat-label">Value</div><div class="stat-val accent">₦${fmtNum(val)}</div></div>
     </div>
-    ${l.signInLocation?`<div style="padding:.75rem .9rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.4rem;border-left:3px solid var(--accent);">
-      <div style="font-weight:600;color:var(--accent);margin-bottom:.3rem;">📍 Sign-In Location</div>
-      <div style="color:var(--text);margin-bottom:.2rem;">${esc(l.signInLocation.address||'Unknown')}</div>
-      <div style="color:var(--text3);font-size:11px;display:flex;gap:.75rem;flex-wrap:wrap;">
-        <span>±${l.signInLocation.accuracy||'?'}m accuracy</span>
-        ${l.signInLocation.coords?`<span style="font-family:var(--font-mono);">${esc(l.signInLocation.coords)}</span>`:''}
-        ${l.signInLocation.lat&&l.signInLocation.lng?`<a href="https://maps.google.com/?q=${l.signInLocation.lat},${l.signInLocation.lng}" target="_blank" style="color:var(--accent);text-decoration:none;">View on Maps ↗</a>`:''}
-      </div>
-    </div>`:''} 
-    ${l.signOutLocation?`<div style="padding:.75rem .9rem;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:.75rem;border-left:3px solid var(--success);">
-      <div style="font-weight:600;color:var(--success);margin-bottom:.3rem;">📍 Sign-Out Location</div>
-      <div style="color:var(--text);margin-bottom:.2rem;">${esc(l.signOutLocation.address||'Unknown')}</div>
-      <div style="color:var(--text3);font-size:11px;display:flex;gap:.75rem;flex-wrap:wrap;">
-        <span>±${l.signOutLocation.accuracy||'?'}m accuracy</span>
-        ${l.signOutLocation.coords?`<span style="font-family:var(--font-mono);">${esc(l.signOutLocation.coords)}</span>`:''}
-        ${l.signOutLocation.lat&&l.signOutLocation.lng?`<a href="https://maps.google.com/?q=${l.signOutLocation.lat},${l.signOutLocation.lng}" target="_blank" style="color:var(--accent);text-decoration:none;">View on Maps ↗</a>`:''}
-      </div>
-    </div>`:''}
-
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;">Tasks</div>
+    <div id="log-detail-locations"><div style="font-size:12px;color:var(--text3);padding:.5rem 0;">Loading location details…</div></div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;margin-top:.25rem;">Tasks</div>
     ${(l.tasks||[]).map((t,i)=>{
       const comp=parseInt(t.completion||0);
       const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
@@ -2223,7 +2262,17 @@ function showLogDetail(logId){
       </div>`;
     }).join('')}
     ${(l.tasks||[]).length?`<div class="total-row"><span style="font-size:13px;">Total Value</span><span style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</span></div>`:''}`;
+
+  document.getElementById('report-detail-content').innerHTML=baseHtml;
   showModal('modal-report-detail');
+
+  // Now resolve locations asynchronously (re-geocodes vague addresses)
+  const [inHtml,outHtml]=await Promise.all([
+    buildLocationHtml(l.signInLocation,'📍 Sign-In Location','var(--accent)','var(--accent)'),
+    buildLocationHtml(l.signOutLocation,'📍 Sign-Out Location','var(--success)','var(--success)')
+  ]);
+  const locEl=document.getElementById('log-detail-locations');
+  if(locEl)locEl.innerHTML=(inHtml+outHtml)||'<div style="font-size:12px;color:var(--text3);">No location data recorded.</div>';
 }
 
 function printReport(){
