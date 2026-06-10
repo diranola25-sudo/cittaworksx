@@ -304,23 +304,41 @@ tr:last-child td{border-bottom:none;}
 
     <!-- REPORTS (managers) -->
     <div id="tab-reports" class="container" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
         <div class="page-title" style="margin:0;">Manager <span>Reports</span></div>
         <button class="btn btn-sm btn-primary" onclick="printReport()" id="print-btn" style="display:none;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print PDF
         </button>
       </div>
-      <!-- Date filters -->
+
+      <!-- ── Enhanced filter panel ── -->
       <div class="card" style="margin-bottom:1rem;">
-        <div class="form-row" style="align-items:flex-end;gap:.75rem;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.65rem;text-transform:uppercase;letter-spacing:.7px;">Report Filters</div>
+        <div class="form-row" style="align-items:flex-end;gap:.75rem;margin-bottom:.65rem;">
           <div class="form-group" style="margin:0;"><label>From Date</label><input type="date" id="rpt-from" onchange="renderReportContent()"/></div>
           <div class="form-group" style="margin:0;"><label>To Date</label><input type="date" id="rpt-to" onchange="renderReportContent()"/></div>
           <div class="form-group" style="margin:0;"><label>Department</label>
-            <select id="rpt-dept" onchange="renderReportContent()"><option value="">All Departments</option></select>
+            <select id="rpt-dept" onchange="renderReportContent();populateStaffFilter()"><option value="">All Departments</option></select>
           </div>
         </div>
+        <!-- Staff multi-select -->
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:13px;font-weight:500;color:var(--text2);">Staff
+            <span style="font-size:11px;color:var(--text3);font-weight:400;"> — select one, multiple, or leave blank for all</span>
+          </label>
+          <div id="rpt-staff-list" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--br);padding:.5rem .75rem;max-height:130px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;">
+            <span style="font-size:12px;color:var(--text3);">Loading staff…</span>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-top:.35rem;">
+            <button class="btn btn-sm" onclick="selectAllStaff(true)" style="font-size:11px;padding:.25rem .6rem;">Select All</button>
+            <button class="btn btn-sm" onclick="selectAllStaff(false)" style="font-size:11px;padding:.25rem .6rem;">Clear All</button>
+          </div>
+        </div>
+        <!-- Active report criteria summary -->
+        <div id="rpt-criteria-summary" style="display:none;margin-top:.65rem;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.55rem .85rem;font-size:12px;color:var(--text2);"></div>
       </div>
+
       <div class="tabs">
         <button class="tab active" onclick="switchReportTab('daily')">Daily Logs</button>
         <button class="tab" onclick="switchReportTab('staff')">By Staff</button>
@@ -2072,72 +2090,180 @@ function switchReportTab(tab){
   renderReportContent();
 }
 
+// ── Report helpers ──────────────────────────────────────────────────────────
+const STD_WORK_MINS=480; // 8-hour standard workday
+
+function calcWorkedMins(log){
+  if(!log.signInTime||!log.signOutTime)return 0;
+  const diff=(new Date(log.signOutTime)-new Date(log.signInTime))/60000;
+  return Math.max(0,Math.round(diff));
+}
+
+function idleBar(workedMins){
+  const pct=Math.min(100,Math.round(workedMins/STD_WORK_MINS*100));
+  const idleMins=Math.max(0,STD_WORK_MINS-workedMins);
+  const col=pct>=90?'var(--success)':pct>=60?'var(--warn)':'var(--danger)';
+  return{pct,idleMins,col,
+    workedLabel:minsToHours(workedMins),
+    idleLabel:idleMins>0?minsToHours(idleMins)+' idle':'',
+    html:`<div style="margin-top:.35rem;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:.2rem;">
+        <span>Active: ${minsToHours(workedMins)}</span>
+        ${idleMins>0?`<span style="color:${col==='var(--danger)'?'var(--danger)':'var(--warn)'};">Idle: ${minsToHours(idleMins)}</span>`:'<span style="color:var(--success);">Full day ✓</span>'}
+      </div>
+      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;"></div>
+      </div>
+    </div>`
+  };
+}
+
+function getSelectedStaffIds(){
+  return[...document.querySelectorAll('.rpt-staff-chk:checked')].map(c=>c.value);
+}
+
+function selectAllStaff(checked){
+  document.querySelectorAll('.rpt-staff-chk').forEach(c=>c.checked=checked);
+  renderReportContent();
+}
+
+function populateStaffFilter(){
+  const deptFilter=document.getElementById('rpt-dept')?.value||'';
+  const container=document.getElementById('rpt-staff-list');
+  if(!container)return;
+  const staff=(S._staff||[]).filter(s=>!deptFilter||s.department===deptFilter);
+  if(!staff.length){container.innerHTML='<span style="font-size:12px;color:var(--text3);">No staff found.</span>';return;}
+  container.innerHTML=staff.map(s=>`
+    <label style="display:inline-flex;align-items:center;gap:5px;background:var(--bg4);border-radius:20px;padding:.2rem .65rem;font-size:12px;cursor:pointer;white-space:nowrap;">
+      <input type="checkbox" class="rpt-staff-chk" value="${s.staffId||s.id}" checked
+        onchange="renderReportContent()" style="accent-color:var(--accent);"/>
+      ${esc(s.name||s.email||s.staffId)}
+    </label>`).join('');
+}
+
+function updateCriteriaSummary(fromDate,toDate,deptFilter,selectedIds,totalLogs){
+  const box=document.getElementById('rpt-criteria-summary');if(!box)return;
+  const staff=(S._staff||[]);
+  const pool=staff.filter(s=>!deptFilter||s.department===deptFilter);
+  const allSelected=selectedIds.length===0||selectedIds.length===pool.length;
+  const parts=[
+    `Period: <strong>${fromDate||'All'}</strong> to <strong>${toDate||'Today'}</strong>`,
+    deptFilter?`Dept: <strong>${esc(deptFilter)}</strong>`:'All Depts',
+    allSelected?'All Staff':`${selectedIds.length} staff selected`,
+    `${totalLogs} log(s) found`
+  ];
+  box.style.display='block';
+  box.innerHTML='📋 '+parts.join(' &nbsp;·&nbsp; ');
+}
+
 async function renderReportContent(){
   const tab=S.reportTab;
   const fromDate=document.getElementById('rpt-from').value;
   const toDate=document.getElementById('rpt-to').value;
   const deptFilter=document.getElementById('rpt-dept').value;
+  const selectedIds=getSelectedStaffIds();
   const c=document.getElementById('report-content');
-  c.innerHTML='<p style="color:var(--text3);">Loading...</p>';
+  c.innerHTML='<p style="color:var(--text3);">Loading…</p>';
   let logs;
   try{
     logs=await getLogsAsync(S.companyId,{from:fromDate,to:toDate});
     if(deptFilter)logs=logs.filter(l=>l.staffDept===deptFilter);
+    if(selectedIds.length)logs=logs.filter(l=>selectedIds.includes(l.staffId));
   }catch(e){c.innerHTML='<p style="color:var(--danger);">Error: '+esc(e.message)+'</p>';return;}
 
+  updateCriteriaSummary(fromDate,toDate,deptFilter,selectedIds,logs.length);
+  const printBtn=document.getElementById('print-btn');
+  if(printBtn)printBtn.style.display=tab==='detailed'?'':'none';
+
+  // ── Daily Logs
   if(tab==='daily'){
-    if(!window._logsCache)window._logsCache={};
-    logs.forEach(l=>window._logsCache[l.id]=l);
     if(!window._logsCache)window._logsCache={};
     logs.forEach(l=>window._logsCache[l.id]=l);
     logs=[...logs].sort((a,b)=>new Date(b.signInTime||0)-new Date(a.signInTime||0));
     c.innerHTML=logs.length?logs.map(l=>{
-      const val=calcLogVal(l);const mins=calcLogMins(l);
-      return `<div class="report-row" onclick="showLogDetail('${l.id}')">
+      const val=calcLogVal(l);const taskMins=calcLogMins(l);
+      const workedMins=calcWorkedMins(l);const ib=idleBar(workedMins);
+      const addr=l.signInLocation?.address||'';
+      return`<div class="report-row" onclick="showLogDetail('${l.id}')">
         <div class="report-avatar">${initials(l.staffName||'?')}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:13px;">${esc(l.staffName||l.staffId)}</div>
           <div style="font-size:11px;color:var(--text3);">${l.date} · ${l.signInTime?fmtTime(l.signInTime):'?'} → ${l.signOutTime?fmtTime(l.signOutTime):'Active'}</div>
-          ${l.signInLocation&&l.signInLocation.address?`<div style="font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">📍 ${esc(l.signInLocation.address)}</div>`:''}
+          ${addr?`<div style="font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;">📍 ${esc(addr)}</div>`:''}
+          ${l.signOutTime?ib.html:''}
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</div>
-          <div style="font-size:11px;color:var(--text3);">${minsToHours(mins)}</div>
+          <div style="font-size:11px;color:var(--text3);">${minsToHours(taskMins)}</div>
         </div>
-      </div>`;}).join(''):'<p style="color:var(--text3);">No logs in this period.</p>';
+      </div>`;
+    }).join(''):'<p style="color:var(--text3);">No logs in this period.</p>';
   }
+
+  // ── By Staff
   if(tab==='staff'){
     const byStaff={};
     logs.forEach(l=>{
-      if(!byStaff[l.staffId])byStaff[l.staffId]={name:l.staffName||l.staffId,dept:l.staffDept||'',days:0,val:0,mins:0};
-      byStaff[l.staffId].days++;byStaff[l.staffId].val+=calcLogVal(l);byStaff[l.staffId].mins+=calcLogMins(l);
+      if(!byStaff[l.staffId])byStaff[l.staffId]={name:l.staffName||l.staffId,dept:l.staffDept||'',days:0,val:0,taskMins:0,workedMins:0};
+      byStaff[l.staffId].days++;byStaff[l.staffId].val+=calcLogVal(l);
+      byStaff[l.staffId].taskMins+=calcLogMins(l);byStaff[l.staffId].workedMins+=calcWorkedMins(l);
     });
     const rows=Object.entries(byStaff).sort((a,b)=>b[1].val-a[1].val);
-    c.innerHTML=rows.length?rows.map(([id,d])=>`
-      <div class="report-row">
+    c.innerHTML=rows.length?rows.map(([id,d])=>{
+      const stdTotal=d.days*STD_WORK_MINS;
+      const idleTotal=Math.max(0,stdTotal-d.workedMins);
+      const attPct=stdTotal?Math.min(100,Math.round(d.workedMins/stdTotal*100)):0;
+      const col=attPct>=90?'var(--success)':attPct>=60?'var(--warn)':'var(--danger)';
+      return`<div class="report-row">
         <div class="report-avatar">${initials(d.name)}</div>
-        <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${esc(d.name)}</div>
-        <div style="font-size:11px;color:var(--text3);">${esc(d.dept)} · ${d.days} day(s)</div></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;">${esc(d.name)}</div>
+          <div style="font-size:11px;color:var(--text2);">${esc(d.dept)} · ${d.days} day(s) · Active: ${minsToHours(d.workedMins)}${idleTotal?` · <span style="color:var(--warn);">Idle: ${minsToHours(idleTotal)}</span>`:' · <span style="color:var(--success);">Full attendance</span>'}</div>
+          <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:.35rem;max-width:200px;">
+            <div style="height:100%;width:${attPct}%;background:${col};border-radius:2px;"></div>
+          </div>
+        </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--success);">₦${fmtNum(d.val)}</div>
-          <div style="font-size:11px;color:var(--text3);">${minsToHours(d.mins)}</div>
+          <div style="font-size:11px;color:var(--text3);">${minsToHours(d.taskMins)} tasks</div>
         </div>
-      </div>`).join(''):'<p style="color:var(--text3);">No data.</p>';
+      </div>`;
+    }).join(''):'<p style="color:var(--text3);">No data.</p>';
   }
+
+  // ── Summary
   if(tab==='summary'){
     const totalVal=logs.reduce((a,l)=>a+calcLogVal(l),0);
-    const totalMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+    const totalTaskMins=logs.reduce((a,l)=>a+calcLogMins(l),0);
+    const totalWorkedMins=logs.reduce((a,l)=>a+calcWorkedMins(l),0);
+    const totalStdMins=logs.length*STD_WORK_MINS;
+    const totalIdleMins=Math.max(0,totalStdMins-totalWorkedMins);
     const totalTasks=logs.reduce((a,l)=>a+(l.tasks||[]).length,0);
+    const attPct=totalStdMins?Math.min(100,Math.round(totalWorkedMins/totalStdMins*100)):0;
+    const col=attPct>=90?'var(--success)':attPct>=60?'var(--warn)':'var(--danger)';
     c.innerHTML=`
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-label">Logs</div><div class="stat-val">${logs.length}</div></div>
         <div class="stat-card"><div class="stat-label">Tasks</div><div class="stat-val">${totalTasks}</div></div>
-        <div class="stat-card"><div class="stat-label">Total Hours</div><div class="stat-val accent">${minsToHours(totalMins)}</div></div>
+        <div class="stat-card"><div class="stat-label">Active Hours</div><div class="stat-val accent">${minsToHours(totalWorkedMins)}</div></div>
         <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val accent">₦${fmtNum(totalVal)}</div></div>
+      </div>
+      <div class="card" style="margin-top:.75rem;">
+        <div class="card-title">Attendance vs Standard 8h Day</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:.4rem;flex-wrap:wrap;gap:.35rem;">
+          <span>Active: <strong>${minsToHours(totalWorkedMins)}</strong></span>
+          <span style="color:${col};">${attPct}% of standard</span>
+          ${totalIdleMins?`<span style="color:var(--warn);">Idle: <strong>${minsToHours(totalIdleMins)}</strong></span>`:'<span style="color:var(--success);">Full attendance ✓</span>'}
+        </div>
+        <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;">
+          <div style="height:100%;width:${attPct}%;background:${col};border-radius:5px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:.35rem;">${logs.length} log(s) × 8h = ${minsToHours(totalStdMins)} expected</div>
       </div>`;
   }
+
+  // ── Detailed
   if(tab==='detailed'){
-    // Group by department then staff
     const grouped={};
     logs.forEach(l=>{
       const dept=l.staffDept||'Unassigned';
@@ -2145,23 +2271,67 @@ async function renderReportContent(){
       if(!grouped[dept][l.staffId])grouped[dept][l.staffId]={name:l.staffName||l.staffId,logs:[]};
       grouped[dept][l.staffId].logs.push(l);
     });
+    const selectedNames=selectedIds.length
+      ?(S._staff||[]).filter(s=>selectedIds.includes(s.staffId||s.id)).map(s=>s.name||s.email).join(', ')
+      :'All Staff';
     let html=`<div id="print-area">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:1rem;">Period: ${fromDate||'All'} to ${toDate||'Today'}</div>`;
+      <div style="margin-bottom:1rem;padding:.75rem 1rem;background:var(--bg3);border-radius:8px;font-size:12px;border-left:3px solid var(--accent);">
+        <div style="font-weight:700;font-size:14px;margin-bottom:.4rem;">Report Criteria</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.25rem .75rem;color:var(--text2);">
+          <div>Period: <strong>${fromDate||'All'} to ${toDate||'Today'}</strong></div>
+          <div>Department: <strong>${deptFilter?esc(deptFilter):'All'}</strong></div>
+          <div>Staff: <strong>${esc(selectedNames)}</strong></div>
+          <div>Generated: <strong>${new Date().toLocaleString('en-NG')}</strong></div>
+          <div>Total Logs: <strong>${logs.length}</strong></div>
+          <div>Company: <strong>${esc(S.company?.name||'')}</strong></div>
+        </div>
+      </div>`;
     Object.entries(grouped).forEach(([dept,staffMap])=>{
-      html+=`<div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;"><span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent);">${esc(dept)}</span></div>`;
+      html+=`<div style="background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;">
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent);">${esc(dept)}</span></div>`;
       Object.entries(staffMap).forEach(([sid,sd])=>{
         const totalVal=sd.logs.reduce((a,l)=>a+calcLogVal(l),0);
-        const totalMins=sd.logs.reduce((a,l)=>a+calcLogMins(l),0);
-        html+=`<div style="margin-left:.75rem;margin-bottom:1rem;">
-          <div style="font-weight:600;font-size:13px;margin-bottom:.4rem;">${esc(sd.name)} <span style="color:var(--text3);font-weight:400;">— ₦${fmtNum(totalVal)} · ${minsToHours(totalMins)}</span></div>`;
+        const totalTaskMins=sd.logs.reduce((a,l)=>a+calcLogMins(l),0);
+        const totalWorkedMins=sd.logs.reduce((a,l)=>a+calcWorkedMins(l),0);
+        const totalStdMins=sd.logs.length*STD_WORK_MINS;
+        const totalIdleMins=Math.max(0,totalStdMins-totalWorkedMins);
+        const attPct=totalStdMins?Math.min(100,Math.round(totalWorkedMins/totalStdMins*100)):0;
+        const col=attPct>=90?'var(--success)':attPct>=60?'var(--warn)':'var(--danger)';
+        html+=`<div style="margin-left:.75rem;margin-bottom:1.25rem;">
+          <div style="font-weight:600;font-size:14px;margin-bottom:.2rem;">${esc(sd.name)}
+            <span style="color:var(--text3);font-weight:400;font-size:12px;"> — ₦${fmtNum(totalVal)} · ${minsToHours(totalTaskMins)} tasks</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:.45rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+            <span>Active: <strong>${minsToHours(totalWorkedMins)}</strong></span>
+            <span>Standard: <strong>${minsToHours(totalStdMins)}</strong></span>
+            ${totalIdleMins?`<span style="color:var(--warn);">Idle: <strong>${minsToHours(totalIdleMins)}</strong></span>`:'<span style="color:var(--success);">Full attendance ✓</span>'}
+            <span style="color:${col};">Attendance: <strong>${attPct}%</strong></span>
+          </div>`;
         sd.logs.forEach(l=>{
-          html+=`<div style="margin-left:.75rem;margin-bottom:.5rem;">
-            <div style="font-size:12px;color:var(--text3);">${l.date} · In: ${l.signInTime?fmtTime(l.signInTime):'?'} Out: ${l.signOutTime?fmtTime(l.signOutTime):'—'}</div>
+          const workedMins=calcWorkedMins(l);const ib=idleBar(workedMins);
+          const inLoc=l.signInLocation||{};const outLoc=l.signOutLocation||{};
+          const inAddr=inLoc.address||'';const outAddr=outLoc.address||'';
+          const inCoords=inLoc.lat&&inLoc.lng?`${parseFloat(inLoc.lat).toFixed(6)}, ${parseFloat(inLoc.lng).toFixed(6)}`:(inLoc.coords||'');
+          const outCoords=outLoc.lat&&outLoc.lng?`${parseFloat(outLoc.lat).toFixed(6)}, ${parseFloat(outLoc.lng).toFixed(6)}`:(outLoc.coords||'');
+          const inMaps=inLoc.lat?`https://maps.google.com/?q=${inLoc.lat},${inLoc.lng}`:'';
+          const outMaps=outLoc.lat?`https://maps.google.com/?q=${outLoc.lat},${outLoc.lng}`:'';
+          html+=`<div style="margin-left:.75rem;margin-bottom:.85rem;border-left:2px solid var(--border);padding-left:.75rem;">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.3rem;">${l.date}</div>
+            <div style="display:flex;gap:1.5rem;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:.3rem;">
+              <span>In: <strong>${l.signInTime?fmtTime(l.signInTime):'?'}</strong></span>
+              <span>Out: <strong>${l.signOutTime?fmtTime(l.signOutTime):'—'}</strong></span>
+              <span>Active: <strong style="color:${ib.col};">${ib.workedLabel}</strong></span>
+              ${ib.idleMins>0?`<span style="color:var(--warn);">Idle: <strong>${ib.idleLabel}</strong></span>`:'<span style="color:var(--success);">Full day ✓</span>'}
+            </div>
+            ${inAddr||inCoords?`<div style="font-size:11px;color:var(--text3);margin-bottom:.15rem;">📍 In: ${esc(inAddr)||inCoords}${inCoords&&inAddr?` <span style="opacity:.6;">(${inCoords})</span>`:''} ${inMaps?`<a href="${inMaps}" target="_blank" style="color:var(--accent);text-decoration:none;">Map ↗</a>`:''}</div>`:''}
+            ${outAddr||outCoords?`<div style="font-size:11px;color:var(--text3);margin-bottom:.35rem;">📍 Out: ${esc(outAddr)||outCoords}${outCoords&&outAddr?` <span style="opacity:.6;">(${outCoords})</span>`:''} ${outMaps?`<a href="${outMaps}" target="_blank" style="color:var(--accent);text-decoration:none;">Map ↗</a>`:''}</div>`:''}
+            ${l.signOutTime?ib.html:''}
             ${(l.tasks||[]).map((t,i)=>`
-              <div style="display:grid;grid-template-columns:1fr auto auto;gap:.5rem;align-items:start;padding:.35rem .5rem;background:var(--bg3);border-radius:6px;margin-top:.25rem;font-size:12px;">
+              <div style="display:grid;grid-template-columns:1fr 38px 60px 80px;gap:.5rem;align-items:start;padding:.35rem .5rem;background:var(--bg3);border-radius:6px;margin-top:.25rem;font-size:12px;">
                 <span>${i+1}. ${esc(t.description||'')}</span>
-                <span style="color:var(--text3);white-space:nowrap;">${minsToHours(parseInt(t.duration)||0)}</span>
-                <span style="font-family:var(--font-mono);color:var(--success);white-space:nowrap;">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+                <span style="color:var(--accent);font-weight:600;white-space:nowrap;text-align:center;">${parseInt(t.completion||0)}%</span>
+                <span style="color:var(--text3);white-space:nowrap;text-align:right;">${minsToHours(parseInt(t.duration)||0)}</span>
+                <span style="font-family:var(--font-mono);color:var(--success);white-space:nowrap;text-align:right;">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
               </div>`).join('')}
           </div>`;
         });
@@ -2170,128 +2340,52 @@ async function renderReportContent(){
     });
     html+=`</div>`;
     c.innerHTML=html||'<p style="color:var(--text3);">No data in this period.</p>';
+    if(printBtn)printBtn.style.display='';
   }
-}
-
-async function showLogDetail(logId){
-  const l=(window._logsCache&&window._logsCache[logId]);if(!l)return;
-  const val=calcLogVal(l);const mins=calcLogMins(l);
-
-  // Helper: detect if a stored address is too vague (state/country level only)
-  function isVagueAddress(addr){
-    if(!addr)return true;
-    const lower=addr.toLowerCase();
-    // Vague if it only mentions state/country with no street info
-    const vaguePatterns=[/^[a-z\s]+state,\s*[a-z]+$/i,/^[a-z\s]+,\s*[a-z]+$/i];
-    const words=addr.split(',').map(s=>s.trim()).filter(Boolean);
-    return words.length<=2; // only 1-2 parts = state+country level
-  }
-
-  // Helper: format a location object into a rich display block
-  async function buildLocationHtml(loc,label,borderColor,labelColor){
-    if(!loc)return'';
-    let address=loc.address||'';
-    let coords=loc.coords||(loc.lat&&loc.lng?`${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`:'');
-    let freshAddress=false;
-
-    // If address is vague AND we have lat/lng, re-geocode from Nominatim right now
-    if(isVagueAddress(address)&&loc.lat&&loc.lng){
-      try{
-        const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18&addressdetails=1`,
-          {headers:{'Accept-Language':'en','User-Agent':'CittaWorksX/1.0'}});
-        const d=await r.json();
-        const a=d.address||{};
-        const building=a.amenity||a.building||a.office||a.shop||a.retail||null;
-        const houseNum=a.house_number||'';
-        const road=a.road||a.pedestrian||a.footway||a.path||null;
-        const streetLine=road?(houseNum?houseNum+' '+road:road):null;
-        const area=a.neighbourhood||a.quarter||a.suburb||a.city_district||null;
-        const district=a.county||a.district||null;
-        const city=a.city||a.town||a.municipality||a.village||null;
-        const postcode=a.postcode||null;
-        const state=a.state||a.province||null;
-        const country=a.country||null;
-        const parts=[building,streetLine,area,district,city,postcode,state,country].filter(Boolean);
-        if(parts.length>2){
-          address=parts.join(', ');
-          freshAddress=true;
-        }
-      }catch(e){/* keep original */}
-    }
-
-    const mapsUrl=loc.lat&&loc.lng?`https://maps.google.com/?q=${loc.lat},${loc.lng}`:'';
-    return`<div style="padding:.85rem 1rem;background:var(--bg3);border-radius:10px;font-size:12px;margin-bottom:.5rem;border-left:3px solid ${borderColor};">
-      <div style="font-weight:600;color:${labelColor};margin-bottom:.4rem;">${label}</div>
-      <div style="color:var(--text);font-size:13px;line-height:1.5;margin-bottom:.4rem;">${esc(address)||'Address not recorded'}</div>
-      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-        ${loc.accuracy?`<span style="color:var(--text3);">±${loc.accuracy}m accuracy</span>`:''}
-        ${coords?`<span style="font-family:var(--font-mono);font-size:11px;color:var(--text3);">${esc(coords)}</span>`:''}
-        ${mapsUrl?`<a href="${mapsUrl}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">View on Maps ↗</a>`:''}
-        ${freshAddress?`<span style="color:var(--text3);font-size:10px;font-style:italic;">address retrieved from GPS</span>`:''}
-      </div>
-    </div>`;
-  }
-
-  // Render skeleton immediately, then fill in location async
-  const baseHtml=`
-    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;margin-bottom:.9rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">In</div><div class="stat-val">${l.signInTime?fmtTime(l.signInTime):'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Out</div><div class="stat-val">${l.signOutTime?fmtTime(l.signOutTime):'Active'}</div></div>
-      <div class="stat-card"><div class="stat-label">Hours</div><div class="stat-val accent">${minsToHours(mins)}</div></div>
-      <div class="stat-card"><div class="stat-label">Value</div><div class="stat-val accent">₦${fmtNum(val)}</div></div>
-    </div>
-    <div id="log-detail-locations"><div style="font-size:12px;color:var(--text3);padding:.5rem 0;">Loading location details…</div></div>
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;margin-top:.25rem;">Tasks</div>
-    ${(l.tasks||[]).map((t,i)=>{
-      const comp=parseInt(t.completion||0);
-      const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
-      return`<div style="background:var(--bg3);border-radius:8px;padding:.7rem .85rem;margin-bottom:.4rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-          <span class="task-num">Task ${i+1}</span>
-          <div style="display:flex;gap:.5rem;align-items:center;">
-            <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${compColor};">${comp}%</span>
-            <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
-            <span style="font-family:var(--font-mono);font-size:12px;color:var(--success);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
-          </div>
-        </div>
-        <p style="font-size:13px;margin-bottom:.35rem;">${esc(t.description||'')}</p>
-        <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;">
-          <div style="height:100%;width:${comp}%;background:${compColor};border-radius:2px;"></div>
-        </div>
-      </div>`;
-    }).join('')}
-    ${(l.tasks||[]).length?`<div class="total-row"><span style="font-size:13px;">Total Value</span><span style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</span></div>`:''}`;
-
-  document.getElementById('report-detail-content').innerHTML=baseHtml;
-  showModal('modal-report-detail');
-
-  // Now resolve locations asynchronously (re-geocodes vague addresses)
-  const [inHtml,outHtml]=await Promise.all([
-    buildLocationHtml(l.signInLocation,'📍 Sign-In Location','var(--accent)','var(--accent)'),
-    buildLocationHtml(l.signOutLocation,'📍 Sign-Out Location','var(--success)','var(--success)')
-  ]);
-  const locEl=document.getElementById('log-detail-locations');
-  if(locEl)locEl.innerHTML=(inHtml+outHtml)||'<div style="font-size:12px;color:var(--text3);">No location data recorded.</div>';
 }
 
 function printReport(){
   const content=document.getElementById('print-area');if(!content)return;
   const co=S.company||{name:''};
+  const fromDate=document.getElementById('rpt-from').value;
+  const toDate=document.getElementById('rpt-to').value;
+  const deptFilter=document.getElementById('rpt-dept').value;
+  const selectedIds=getSelectedStaffIds();
+  const selectedNames=selectedIds.length
+    ?(S._staff||[]).filter(s=>selectedIds.includes(s.staffId||s.id)).map(s=>s.name||s.email).join(', ')
+    :'All Staff';
+  // Clone and replace CSS vars with print-safe colours
+  let inner=content.innerHTML
+    .replace(/var\(--success\)/g,'#059669').replace(/var\(--warn\)/g,'#d97706')
+    .replace(/var\(--danger\)/g,'#dc2626').replace(/var\(--accent\)/g,'#00a884')
+    .replace(/var\(--text\)/g,'#111').replace(/var\(--text2\)/g,'#444')
+    .replace(/var\(--text3\)/g,'#888').replace(/var\(--bg3\)/g,'#f4f4f4')
+    .replace(/var\(--bg4\)/g,'#ebebeb').replace(/var\(--border\)/g,'#ddd')
+    .replace(/var\(--font-mono\)/g,'monospace');
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>CittaWorksX Report — ${co?co.name:''}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:20px;}
-    h1{font-size:18px;margin-bottom:4px;}h2{font-size:14px;color:#444;margin-bottom:16px;}
-    .dept-header{background:#f0f0f0;padding:6px 10px;font-weight:700;margin:12px 0 6px;border-radius:4px;}
-    .staff-name{font-weight:600;margin:8px 0 4px 10px;}
-    .log-date{font-size:11px;color:#666;margin-left:20px;}
-    .task-row{display:grid;grid-template-columns:1fr 80px 100px;gap:8px;padding:3px 6px;background:#f9f9f9;border-radius:3px;margin:2px 20px;}
-    .total{text-align:right;font-weight:700;border-top:1px solid #ccc;padding-top:8px;margin-top:8px;}
-    @media print{button{display:none;}}</style></head><body>
+  w.document.write(`<!DOCTYPE html><html><head>
+    <title>CittaWorksX Report — ${esc(co.name)}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;padding:24px;max-width:920px;margin:0 auto;}
+      h1{font-size:20px;font-weight:700;margin-bottom:2px;}
+      .co-name{font-size:14px;color:#00a884;font-weight:600;margin-bottom:4px;}
+      .criteria-box{background:#f4faf8;border:1px solid #00a884;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;}
+      a{color:#00a884;}
+      @media print{.no-print{display:none;}.page-break{page-break-before:always;}}
+    </style></head><body>
     <h1>CittaWorksX — Activity Report</h1>
-    <h2>${co?co.name:''}</h2>
-    <button onclick="window.print()" style="padding:6px 16px;background:#00d4aa;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:16px;">🖨 Print / Save PDF</button>
-    ${content.innerHTML}</body></html>`);
+    <div class="co-name">${esc(co.name)}</div>
+    <div style="font-size:11px;color:#777;margin-bottom:12px;">Generated: ${new Date().toLocaleString('en-NG')}</div>
+    <div class="criteria-box">
+      <div>Period: <strong>${fromDate||'All'} to ${toDate||'Today'}</strong></div>
+      <div>Department: <strong>${deptFilter?esc(deptFilter):'All Departments'}</strong></div>
+      <div>Staff: <strong>${esc(selectedNames)}</strong></div>
+      <div>Company: <strong>${esc(co.name)}</strong></div>
+    </div>
+    <button class="no-print" onclick="window.print()" style="padding:7px 18px;background:#00d4aa;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:16px;">🖨 Print / Save as PDF</button>
+    ${inner}
+    </body></html>`);
   w.document.close();
 }
 
@@ -3830,7 +3924,7 @@ function switchTab(tab){
     if(nav)nav.classList.toggle('active',t===tab);
   });
   if(tab==='staff')renderStaffList();
-  if(tab==='reports'){renderReportContent();document.getElementById('print-btn')&&(document.getElementById('print-btn').style.display='none');}
+  if(tab==='reports'){renderReportContent();populateStaffFilter();document.getElementById('print-btn')&&(document.getElementById('print-btn').style.display='none');}
   if(tab==='profile')renderProfile();
   if(tab==='guide')renderGuide();
   if(tab==='kpi')renderKpiTab();
