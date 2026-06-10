@@ -963,42 +963,106 @@ function getLocation(cb){
   );
 }
 
-function reverseGeocode(lat,lng,cb){
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-    {headers:{'Accept-Language':'en','User-Agent':'CittaWorksX/1.0'}})
-    .then(r=>r.json()).then(d=>{
-      const a=d.address||{};
-      // Build the most specific address possible, layer by layer
-      // Layer 1: Building/POI (most specific)
-      const building=a.amenity||a.building||a.office||a.shop||a.retail||a.hotel||a.tourism||a.leisure||null;
-      // Layer 2: House number + road
-      const houseNum=a.house_number||'';
-      const road=a.road||a.pedestrian||a.footway||a.path||a.street||null;
-      const streetLine=road?(houseNum?houseNum+' '+road:road):null;
-      // Layer 3: Local area
-      const area=a.neighbourhood||a.quarter||a.suburb||a.city_district||a.residential||null;
-      // Layer 4: District/LGA
-      const district=a.city_block||a.district||a.county||null;
-      // Layer 5: City/Town
-      const city=a.city||a.town||a.municipality||a.village||a.hamlet||null;
-      // Layer 6: State
-      const state=a.state||a.province||a.region||null;
-      // Layer 7: Country
-      const country=a.country||null;
-      // Postcode
-      const postcode=a.postcode||null;
+// ── Geocoding configuration ──────────────────────────────────────────────────
+// Set your Google Maps API key here for best results in Nigeria.
+// Get a free key at console.cloud.google.com → Enable "Geocoding API"
+// Leave blank to use Nominatim (OpenStreetMap) only — less detail in some areas.
+const GOOGLE_MAPS_API_KEY = ''; // e.g. 'AIzaSy...'
 
-      // Assemble full address — use all available layers
-      const parts=[building,streetLine,area,district,city,postcode,state,country].filter(Boolean);
-      const fullAddress=parts.length?parts.join(', '):`${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+async function reverseGeocodeGoogle(lat,lng){
+  // Uses Google Maps Geocoding API — best street-level coverage in Nigeria
+  const url=`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en&result_type=street_address|route|sublocality|locality`;
+  const r=await fetch(url);
+  const d=await r.json();
+  if(d.status!=='OK'||!d.results||!d.results.length)return null;
 
-      // Store components separately for display
-      const components={building,streetLine,area,district,city,postcode,state,country,
-        rawDisplayName:d.display_name||''};
+  // Google returns structured address_components — extract each type
+  const best=d.results[0];
+  const comps=best.address_components||[];
+  const get=(types)=>{
+    for(const t of types){
+      const c=comps.find(x=>x.types.includes(t));
+      if(c)return c.long_name;
+    }
+    return null;
+  };
+  const streetNum =get(['street_number']);
+  const route     =get(['route']);
+  const subloc1   =get(['sublocality_level_1','sublocality']);
+  const subloc2   =get(['sublocality_level_2']);
+  const locality  =get(['locality']);
+  const admin2    =get(['administrative_area_level_2']);
+  const admin1    =get(['administrative_area_level_1']);
+  const country   =get(['country']);
+  const postcode  =get(['postal_code']);
 
-      cb(fullAddress,components);
-    })
-    .catch(()=>cb(`${lat.toFixed(6)}, ${lng.toFixed(6)}`,null));
+  const streetLine=route?(streetNum?streetNum+' '+route:route):null;
+  const parts=[streetLine,subloc2,subloc1,locality,admin2,postcode,admin1,country].filter(Boolean);
+  const address=parts.length?parts.join(', '):best.formatted_address||null;
+  return{
+    address,
+    components:{streetLine,area:subloc1||subloc2,city:locality,district:admin2,state:admin1,country,postcode,
+      rawDisplayName:best.formatted_address||''}
+  };
+}
+
+async function reverseGeocodeNominatim(lat,lng){
+  // OpenStreetMap Nominatim — free but limited street coverage in some Lagos areas
+  const r=await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+    {headers:{'Accept-Language':'en','User-Agent':'CittaWorksX/1.0'}}
+  );
+  const d=await r.json();
+  const a=d.address||{};
+  const building  =a.amenity||a.building||a.office||a.shop||a.retail||a.hotel||a.tourism||null;
+  const houseNum  =a.house_number||'';
+  const road      =a.road||a.pedestrian||a.footway||a.path||a.street||null;
+  const streetLine=road?(houseNum?houseNum+' '+road:road):null;
+  const area      =a.neighbourhood||a.quarter||a.suburb||a.city_district||a.residential||null;
+  const district  =a.county||a.district||null;
+  const city      =a.city||a.town||a.municipality||a.village||a.hamlet||null;
+  const postcode  =a.postcode||null;
+  const state     =a.state||a.province||null;
+  const country   =a.country||null;
+  const parts=[building,streetLine,area,district,city,postcode,state,country].filter(Boolean);
+  const address=parts.length?parts.join(', '):null;
+  return{address,components:{building,streetLine,area,district,city,postcode,state,country,
+    rawDisplayName:d.display_name||''}};
+}
+
+// Address quality check — does it have street-level detail?
+function addressHasStreet(addr){
+  if(!addr)return false;
+  const parts=addr.split(',').map(s=>s.trim()).filter(Boolean);
+  // Good if 3+ parts (likely has street/area/city)
+  return parts.length>=3;
+}
+
+async function reverseGeocode(lat,lng,cb){
+  // Always include GPS coordinates in the stored object regardless of address quality
+  const coordStr=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+  // Strategy: try Google first if API key set, then Nominatim, then coords-only
+  let result=null;
+  if(GOOGLE_MAPS_API_KEY){
+    try{ result=await reverseGeocodeGoogle(lat,lng); }
+    catch(e){ console.warn('Google geocode failed:',e.message); }
+  }
+
+  // Try Nominatim if Google not configured or returned no street
+  if(!result||!addressHasStreet(result.address)){
+    try{
+      const nom=await reverseGeocodeNominatim(lat,lng);
+      // Use Nominatim if it has more detail than Google returned
+      if(nom&&nom.address&&(!result||!result.address||nom.address.length>result.address.length)){
+        result=nom;
+      }
+    }catch(e){ console.warn('Nominatim failed:',e.message); }
+  }
+
+  // Final address: best we have, or fall back to readable coords
+  const finalAddress=(result&&result.address)?result.address:`GPS: ${coordStr}`;
+  cb(finalAddress, result?result.components:null);
 }
 function captureLocation(dotId,txtId,cb){
   const dot=document.getElementById(dotId);
@@ -2090,7 +2154,102 @@ function switchReportTab(tab){
   renderReportContent();
 }
 
-// ── Report helpers ──────────────────────────────────────────────────────────
+// ── Detect vague address (state/country only)
+function isVagueAddress(addr){
+  if(!addr)return true;
+  if(addr.startsWith('GPS:'))return false; // already a coord-only fallback
+  const parts=addr.split(',').map(s=>s.trim()).filter(Boolean);
+  return parts.length<=2;
+}
+
+// ── Build rich location block — re-geocodes if vague, always shows GPS + Maps link
+async function buildLocationHtml(loc,label,borderColor,labelColor){
+  if(!loc)return'';
+  let address=loc.address||'';
+  const lat=loc.lat,lng=loc.lng;
+  const coords=loc.coords||(lat&&lng?`${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`:'');
+  const mapsUrl=lat&&lng?`https://maps.google.com/?q=${lat},${lng}`:'';
+  let freshAddress=false;
+
+  // Re-geocode if vague and we have coords
+  if(isVagueAddress(address)&&lat&&lng){
+    try{
+      if(GOOGLE_MAPS_API_KEY){
+        const gr=await reverseGeocodeGoogle(lat,lng);
+        if(gr&&gr.address&&addressHasStreet(gr.address)){address=gr.address;freshAddress=true;}
+      }
+      if(!freshAddress){
+        const nr=await reverseGeocodeNominatim(lat,lng);
+        if(nr&&nr.address&&nr.address.split(',').length>2){address=nr.address;freshAddress=true;}
+      }
+    }catch(e){}
+  }
+
+  // Build display — always include GPS coords and Maps link regardless of address quality
+  const addrText=address&&!address.startsWith('GPS:')?address:'';
+  const noStreet=addrText&&isVagueAddress(addrText);
+  return`<div style="padding:.85rem 1rem;background:var(--bg3);border-radius:10px;font-size:12px;margin-bottom:.5rem;border-left:3px solid ${borderColor};">
+    <div style="font-weight:600;color:${labelColor};margin-bottom:.4rem;">${label}</div>
+    ${addrText?`<div style="color:var(--text);font-size:13px;line-height:1.5;margin-bottom:.35rem;">${esc(addrText)}</div>`:''}
+    ${noStreet?`<div style="font-size:11px;color:var(--warn);margin-bottom:.3rem;">⚠ Street-level data unavailable for this area in our maps provider. Use the GPS coordinates or Maps link below for the exact location.</div>`:''}
+    <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.2rem;">
+      ${loc.accuracy?`<span style="color:var(--text3);font-size:11px;">±${loc.accuracy}m</span>`:''}
+      ${coords?`<span style="font-family:var(--font-mono);font-size:11px;color:var(--text2);background:var(--bg4);padding:.1rem .4rem;border-radius:4px;">${esc(coords)}</span>`:''}
+      ${mapsUrl?`<a href="${mapsUrl}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;font-size:12px;">📍 View on Maps ↗</a>`:''}
+      ${freshAddress?`<span style="color:var(--text3);font-size:10px;font-style:italic;">re-geocoded from GPS</span>`:''}
+    </div>
+  </div>`;
+}
+
+async function showLogDetail(logId){
+  const l=(window._logsCache&&window._logsCache[logId]);if(!l)return;
+  const val=calcLogVal(l);const mins=calcLogMins(l);
+  const workedMins=calcWorkedMins(l);const ib=idleBar(workedMins);
+
+  const baseHtml=`
+    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;margin-bottom:.9rem;">${esc(l.staffName||l.staffId)} — ${l.date}</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">In</div><div class="stat-val">${l.signInTime?fmtTime(l.signInTime):'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Out</div><div class="stat-val">${l.signOutTime?fmtTime(l.signOutTime):'Active'}</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-val accent">${ib.workedLabel}</div></div>
+      <div class="stat-card"><div class="stat-label">Value</div><div class="stat-val accent">₦${fmtNum(val)}</div></div>
+    </div>
+    ${l.signOutTime?`<div style="margin-bottom:.75rem;">${ib.html}</div>`:''}
+    <div id="log-detail-locations"><div style="font-size:12px;color:var(--text3);padding:.4rem 0;">Loading location details…</div></div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:.6rem;margin-top:.25rem;">Tasks</div>
+    ${(l.tasks||[]).map((t,i)=>{
+      const comp=parseInt(t.completion||0);
+      const compColor=comp===100?'var(--success)':comp>=50?'var(--warn)':'var(--text3)';
+      return`<div style="background:var(--bg3);border-radius:8px;padding:.7rem .85rem;margin-bottom:.4rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+          <span class="task-num">Task ${i+1}</span>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${compColor};">${comp}%</span>
+            <span style="font-size:12px;color:var(--text3);">⏱ ${minsToHours(parseInt(t.duration)||0)}</span>
+            <span style="font-family:var(--font-mono);font-size:12px;color:var(--success);">₦${fmtNum(parseFloat((t.value||'').replace(/,/g,''))||0)}</span>
+          </div>
+        </div>
+        <p style="font-size:13px;margin-bottom:.35rem;">${esc(t.description||'')}</p>
+        <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${comp}%;background:${compColor};border-radius:2px;"></div>
+        </div>
+      </div>`;
+    }).join('')}
+    ${(l.tasks||[]).length?`<div class="total-row"><span>Total Value</span><span style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--success);">₦${fmtNum(val)}</span></div>`:''}`;
+
+  document.getElementById('report-detail-content').innerHTML=baseHtml;
+  showModal('modal-report-detail');
+
+  // Resolve locations async (may re-geocode)
+  const [inHtml,outHtml]=await Promise.all([
+    buildLocationHtml(l.signInLocation,'📍 Sign-In Location','var(--accent)','var(--accent)'),
+    buildLocationHtml(l.signOutLocation,'📍 Sign-Out Location','var(--success)','var(--success)')
+  ]);
+  const locEl=document.getElementById('log-detail-locations');
+  if(locEl)locEl.innerHTML=(inHtml+outHtml)||'<div style="font-size:12px;color:var(--text3);">No location data recorded.</div>';
+}
+
+
 const STD_WORK_MINS=480; // 8-hour standard workday
 
 function calcWorkedMins(log){
